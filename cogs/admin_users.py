@@ -13,19 +13,22 @@ class Admin_Users(commands.Cog, name="Users"):
     async def on_member_remove(self, member):
         print(f'{member} has left the server')
 
-    @commands.command()
+    @commands.command(hidden=True)
+    @commands.has_any_role('admin')
     # async def kick(self, ctx, member : Discord.Member, *, reason=None):
     async def kick(self, ctx, member, *, reason=None):
         await member.kick(reason=reason)
         await ctx.send(f'Kicked user {member.mention}')
 
-    @commands.command()
+    @commands.command(hidden=True)
+    @commands.has_any_role('admin')
     # async def ban(self, ctx, member : Discord.Member, *, reason=None):
     async def ban(self, ctx, member, *, reason=None):
         await member.ban(reason=reason)
         await ctx.send(f'Banned user {member.mention}')
 
-    @commands.command()
+    @commands.command(hidden=True)
+    @commands.has_any_role('admin')
     async def unban(self, ctx, *, member):
         banned_users = await ctx.guild.bans()
         member_name, member_discriminator = member.split('#')

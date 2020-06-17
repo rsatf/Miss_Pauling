@@ -12,6 +12,8 @@ class PUG(commands.Cog, name="Pick-up Game"):
         self.start_delay = 10
         self.players = []
         self.game_message = ""
+        self.servers = [('jhb1.rsa.tf', 27035), ('jhb1.rsa.tf', 27025)]
+        self.passwords = ['games', 'apples']
 
     # @commands.Cog.listener()
     # async def on_reaction_add(self, reaction, user):
@@ -27,6 +29,7 @@ class PUG(commands.Cog, name="Pick-up Game"):
     ## # # # # # # #
 
     @commands.command()
+    @commands.has_any_role('admin', 'pug-admin', 'captain')
     async def start(self, ctx, size=12):
         if not self.game_on:
             self.game_on = True
@@ -40,6 +43,7 @@ class PUG(commands.Cog, name="Pick-up Game"):
             await ctx.send(f'Game already on')
 
     @commands.command()
+    @commands.has_any_role('admin', 'pug-admin', 'captain')
     async def stop(self, ctx):
         if self.game_on:
             ret = await self.game_stop()
@@ -49,6 +53,7 @@ class PUG(commands.Cog, name="Pick-up Game"):
             await ctx.send(f'No game active')
 
     @commands.command()
+    @commands.has_any_role('admin', 'pug-admin', 'captain')
     async def restart(self, ctx, size=0):
         if self.game_on:
             ret = await self.game_reset(size)
@@ -67,6 +72,7 @@ class PUG(commands.Cog, name="Pick-up Game"):
             await ctx.send(f'No game on')
 
     @commands.command()
+    @commands.has_any_role('player')
     async def add(self, ctx):
         if self.game_on:
             if not self.game_full:
@@ -95,6 +101,7 @@ class PUG(commands.Cog, name="Pick-up Game"):
             await ctx.send(f'No game on')
 
     @commands.command()
+    @commands.has_any_role('admin', 'pug-admin', 'captain')
     async def kickplayer(self, ctx, member : discord.Member):
         if self.game_on:
             ret = await self.player_remove(member.mention)
@@ -148,7 +155,10 @@ class PUG(commands.Cog, name="Pick-up Game"):
         if self.player_count == self.max_players:
             self.game_full = True
             await ctx.send(f'Game is full! PM\'ing connection details to all players')
-            await self.status(ctx)
+            for player in self.players:
+                await player.send(f'Your Pick-up Game is ready. Please connect to steam://connect/{self.servers[0][0]}:{self.servers[0][1]}/{self.passwords[0]}')
+                lineup = await self.game_status()
+                await player.send(f'{lineup}')
             await self.game_stop()
     
     # @tasks.loop(seconds=1, count=10)

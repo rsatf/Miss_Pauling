@@ -2,6 +2,7 @@ import sys
 import discord
 from discord.ext import commands
 import valve.source.a2s
+from utils import gameserver_info
 
 class Servers(commands.Cog, name="Servers"):
     def __init__(self, client):
