@@ -22,6 +22,8 @@ class PUG(commands.Cog, name="Pick-up Game"):
     def __init__(self, client):
         load_dotenv()
         self.client = client
+        self.game_guild = int(os.getenv('PRIMARY_GUILD'))
+        self.game_channel = int(os.getenv('PRIMARY_CHANNEL'))
         self.empty_slot = "(?)"
         self.game_on = False
         self.game_full = False
@@ -56,116 +58,124 @@ class PUG(commands.Cog, name="Pick-up Game"):
     @commands.has_any_role('admin', 'pug-admin', 'captain')
     async def start(self, ctx, size=12):
         self.logger.info(f"{ctx.message.author} triggered start()")
-        if not self.game_on:
-            try:
-                self.game_server = await self.find_server()
-            except valve.source.NoResponseError:
-                await ctx.send("No open servers to use, not starting")
-                return
-            self.game_on = True
-            self.max_players = size
-            self.game_map = random.choice(self.map_pool)
-            ret = await self.game_reset(size)
-            if ret:
-                await ctx.send(f'Game started! This game will be played on map {self.game_map} and server {self.game_server[0]}:{self.game_server[1]}')
-                self.game_message = await ctx.send(await self.game_status())
-                await self.game_message.pin()
-        else:
-            await ctx.send(f'Game already on')
+        if ctx.message.guild.id == self.game_guild and ctx.message.channel.id == self.game_channel:
+            if not self.game_on:
+                try:
+                    self.game_server = await self.find_server()
+                except valve.source.NoResponseError:
+                    await ctx.send("No open servers to use, not starting")
+                    return
+                self.game_on = True
+                self.max_players = size
+                self.game_map = random.choice(self.map_pool)
+                ret = await self.game_reset(size)
+                if ret:
+                    await ctx.send(f'Game started! This game will be played on map {self.game_map} and server {self.game_server[0]}:{self.game_server[1]}')
+                    self.game_message = await ctx.send(await self.game_status())
+                    await self.game_message.pin()
+            else:
+                await ctx.send(f'Game already on')
 
     @commands.command(help="- Stops an active pick-up game")
     @commands.has_any_role('admin', 'pug-admin', 'captain')
     async def stop(self, ctx):
         self.logger.info(f"{ctx.message.author} triggered stop()")
-        if self.game_on:
-            ret = await self.game_stop()
-            if ret:
-                await ctx.send(f'Game stopped')
-        else:
-            await ctx.send(f'No game active')
+        if ctx.message.guild.id == self.game_guild and ctx.message.channel.id == self.game_channel:
+            if self.game_on:
+                ret = await self.game_stop()
+                if ret:
+                    await ctx.send(f'Game stopped')
+            else:
+                await ctx.send(f'No game active')
 
     @commands.command(aliases=['re'], help="- Restarts an active pick-up game. Can take an integer argument for the size of the new pug")
     @commands.has_any_role('admin', 'pug-admin', 'captain')
     async def restart(self, ctx, size=0):
         self.logger.info(f"{ctx.message.author} triggered restart()")
-        if self.game_on:
-            ret = await self.game_reset(size)
-            if ret:
-                await ctx.send(f'Game restarted!')
-                self.game_message = await ctx.send(await self.game_status())
-                await self.game_message.pin()
+        if ctx.message.guild.id == self.game_guild and ctx.message.channel.id == self.game_channel:
+            if self.game_on:
+                ret = await self.game_reset(size)
+                if ret:
+                    await ctx.send(f'Game restarted!')
+                    self.game_message = await ctx.send(await self.game_status())
+                    await self.game_message.pin()
         else:
             await ctx.send(f'No game active')
 
     @commands.command(help="- Checks the status of an active pick-up game")
     async def status(self, ctx):
         self.logger.info(f"{ctx.message.author} triggered status()")
-        if self.game_on:
-            await ctx.send(await self.game_status())
-        else:
-            await ctx.send(f'No game on')
+        if ctx.message.guild.id == self.game_guild and ctx.message.channel.id == self.game_channel:
+            if self.game_on:
+                await ctx.send(await self.game_status())
+            else:
+                await ctx.send(f'No game on')
 
     @commands.command(help="- Adds yourself to an active pick-up game")
     @commands.has_any_role('player')
     async def add(self, ctx):
         self.logger.info(f"{ctx.message.author} triggered add()")
-        if self.game_on:
-            if not self.game_full:
-                ret = await self.player_add(ctx.message.author)
-                if ret:
-                    await self.game_update_pin()
-                    await self.status(ctx)
-                    await self.game_start(ctx)
+        if ctx.message.guild.id == self.game_guild and ctx.message.channel.id == self.game_channel:
+            if self.game_on:
+                if not self.game_full:
+                    ret = await self.player_add(ctx.message.author)
+                    if ret:
+                        await self.game_update_pin()
+                        await self.status(ctx)
+                        await self.game_start(ctx)
+                    else:
+                        await ctx.send(f'Already added')
                 else:
-                    await ctx.send(f'Already added')
+                    await ctx.send(f'Game is full')
             else:
-                await ctx.send(f'Game is full')
-        else:
-            await ctx.send(f'No game on')
+                await ctx.send(f'No game on')
 
     @commands.command(aliases=['rem'], help="- Removes yourself from an active pick-up game")
     async def remove(self, ctx):
         self.logger.info(f"{ctx.message.author} triggered remove()")
-        if self.game_on:
-            ret = await self.player_remove(ctx.message.author)
-            if ret:
-                await self.game_update_pin()
-                await self.status(ctx)
+        if ctx.message.guild.id == self.game_guild and ctx.message.channel.id == self.game_channel:
+            if self.game_on:
+                ret = await self.player_remove(ctx.message.author)
+                if ret:
+                    await self.game_update_pin()
+                    await self.status(ctx)
+                else:
+                    await ctx.send(f'Not added')
             else:
-                await ctx.send(f'Not added')
-        else:
-            await ctx.send(f'No game on')
+                await ctx.send(f'No game on')
 
     @commands.command(aliases=['kp'], hidden=True)
     @commands.has_any_role('admin', 'pug-admin', 'captain')
     async def kickplayer(self, ctx, member : discord.Member):
         self.logger.info(f"{ctx.message.author} triggered kickplayer()")
-        if self.game_on:
-            ret = await self.player_remove(member.mention)
-            if ret:
-                await self.game_update_pin()
-                await self.status(ctx)
+        if ctx.message.guild.id == self.game_guild and ctx.message.channel.id == self.game_channel:
+            if self.game_on:
+                ret = await self.player_remove(member.mention)
+                if ret:
+                    await self.game_update_pin()
+                    await self.status(ctx)
+                else:
+                    await ctx.send(f'Player not added')
             else:
-                await ctx.send(f'Player not added')
-        else:
-            await ctx.send(f'No game on')
+                await ctx.send(f'No game on')
 
     @commands.command(help="- Changes the map of the active game")
     @commands.has_any_role('admin', 'pug-admin', 'captain')
     async def map(self, ctx, map):
         self.logger.info(f"{ctx.message.author} triggered map()")
-        if map in self.map_pool:
-            self.game_map = map
-            await ctx.send(f"Map changed to {self.game_map}")
-        else:
-            await ctx.send(f"Invalid map name, !maps to see valid maps.")
-        return
+        if ctx.message.guild.id == self.game_guild and ctx.message.channel.id == self.game_channel:
+            if map in self.map_pool:
+                self.game_map = map
+                await ctx.send(f"Map changed to {self.game_map}")
+            else:
+                await ctx.send(f"Invalid map name, !maps to see valid maps.")
 
     @commands.command(help="- Lists the maps in the map pool")
     @commands.has_any_role('player')
     async def maps(self, ctx):
         self.logger.info(f"{ctx.message.author} triggered maps()")
-        await ctx.send(f"Map pool: {', '.join(self.map_pool)}")
+        if ctx.message.guild.id == self.game_guild and ctx.message.channel.id == self.game_channel:
+            await ctx.send(f"Map pool: {', '.join(self.map_pool)}")
 
     ## # # # # # # # #
     # Game functions #

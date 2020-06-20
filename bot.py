@@ -16,7 +16,6 @@ logger.addHandler(console_handler)
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
-GUILD = os.getenv('GUILD_PRIMARY')
 
 client = commands.Bot(command_prefix = "!")
 
