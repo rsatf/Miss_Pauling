@@ -1,30 +1,31 @@
 import discord
 from discord.ext import commands, tasks
 import os
-# from dotenv import load_dotenv
+from dotenv import load_dotenv
 import logging
 
+log_format = logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s')
 logger = logging.getLogger('discord')
 logger.setLevel(logging.INFO)
-handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
-handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
-logger.addHandler(handler)
+file_handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
+file_handler.setFormatter(log_format)
+logger.addHandler(file_handler)
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(log_format)
+logger.addHandler(console_handler)
 
-# load_dotenv()
-# TOKEN = os.getenv('DISCORD_TOKEN')
-# GUILD = os.getenv('GUILD_PRIMARY')
-
-TOKEN = "NzE0NzU2NDEwNjQyMDA2MDY3.XuTI7g.uJjlTdzhDSFopMWjKw-Noms_HPg"
-GUILD = "##"
+load_dotenv()
+TOKEN = os.getenv('DISCORD_TOKEN')
+GUILD = os.getenv('GUILD_PRIMARY')
 
 client = commands.Bot(command_prefix = "!")
 
 @client.event
 async def on_ready():
     await client.change_presence(status=discord.Status.idle, activity=discord.Game('!help'))
-    print("Bot is online.")
+    logger.info("Bot is online.")
 
-@client.command()
+@client.command(help="- Just checks the bot is still alive")
 async def ping(ctx):
     await ctx.send(f'Pong! {round(client.latency * 1000)}ms')
 
@@ -38,8 +39,9 @@ if __name__ == "__main__":
         try:
             if filename.endswith('.py'):
                 client.load_extension(f'cogs.{filename[:-3]}')
+                logger.info(f"Loaded extension {filename}")
         except Exception as e:
             exc = '{}: {}'.format(type(e).__name__, e)
-            print('Failed to load file {} as extension \n{}'.format(filename, exc))
+            logger.warning(f"Failed to load file {filename} as extension\n{exc}")
 
     client.run(TOKEN)

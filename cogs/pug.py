@@ -1,8 +1,26 @@
 import discord
 from discord.ext import commands, tasks
+import valve.source.a2s
+import valve.rcon
+import random
+import logging
+import os
+from dotenv import load_dotenv
 
 class PUG(commands.Cog, name="Pick-up Game"):
+
+    log_format = logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s')
+    logger = logging.getLogger('pug')
+    logger.setLevel(logging.INFO)
+    file_handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
+    file_handler.setFormatter(log_format)
+    logger.addHandler(file_handler)
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(log_format)
+    logger.addHandler(console_handler)
+
     def __init__(self, client):
+        load_dotenv()
         self.client = client
         self.empty_slot = "(?)"
         self.game_on = False
@@ -12,8 +30,14 @@ class PUG(commands.Cog, name="Pick-up Game"):
         self.start_delay = 10
         self.players = []
         self.game_message = ""
-        self.servers = [('jhb1.rsa.tf', 27035), ('jhb1.rsa.tf', 27025)]
-        self.passwords = ['games', 'apples']
+        self.servers = eval(os.getenv('PUG_SERVERS'))
+        self.passwords = eval(os.getenv('PUG_PASSWORDS'))
+        self.game_server = ""
+        self.game_password = ""
+        self.rcon_password = os.getenv('RCON_PASSWORD')
+        self.map_pool = eval(os.getenv('MAP_POOL'))
+        self.game_map = ""
+        self.used_servers = []
 
     # @commands.Cog.listener()
     # async def on_reaction_add(self, reaction, user):
@@ -28,23 +52,31 @@ class PUG(commands.Cog, name="Pick-up Game"):
     # Bot commands #
     ## # # # # # # #
 
-    @commands.command()
+    @commands.command(help="- Starts a pick-up game")
     @commands.has_any_role('admin', 'pug-admin', 'captain')
     async def start(self, ctx, size=12):
+        self.logger.info(f"{ctx.message.author} triggered start()")
         if not self.game_on:
+            try:
+                self.game_server = await self.find_server()
+            except valve.source.NoResponseError:
+                await ctx.send("No open servers to use, not starting")
+                return
             self.game_on = True
             self.max_players = size
+            self.game_map = random.choice(self.map_pool)
             ret = await self.game_reset(size)
             if ret:
-                await ctx.send(f'Game started!')
+                await ctx.send(f'Game started! This game will be played on map {self.game_map} and server {self.game_server[0]}:{self.game_server[1]}')
                 self.game_message = await ctx.send(await self.game_status())
                 await self.game_message.pin()
         else:
             await ctx.send(f'Game already on')
 
-    @commands.command()
+    @commands.command(help="- Stops an active pick-up game")
     @commands.has_any_role('admin', 'pug-admin', 'captain')
     async def stop(self, ctx):
+        self.logger.info(f"{ctx.message.author} triggered stop()")
         if self.game_on:
             ret = await self.game_stop()
             if ret:
@@ -52,9 +84,10 @@ class PUG(commands.Cog, name="Pick-up Game"):
         else:
             await ctx.send(f'No game active')
 
-    @commands.command()
+    @commands.command(aliases=['re'], help="- Restarts an active pick-up game. Can take an integer argument for the size of the new pug")
     @commands.has_any_role('admin', 'pug-admin', 'captain')
     async def restart(self, ctx, size=0):
+        self.logger.info(f"{ctx.message.author} triggered restart()")
         if self.game_on:
             ret = await self.game_reset(size)
             if ret:
@@ -64,16 +97,18 @@ class PUG(commands.Cog, name="Pick-up Game"):
         else:
             await ctx.send(f'No game active')
 
-    @commands.command()
+    @commands.command(help="- Checks the status of an active pick-up game")
     async def status(self, ctx):
+        self.logger.info(f"{ctx.message.author} triggered status()")
         if self.game_on:
             await ctx.send(await self.game_status())
         else:
             await ctx.send(f'No game on')
 
-    @commands.command()
+    @commands.command(help="- Adds yourself to an active pick-up game")
     @commands.has_any_role('player')
     async def add(self, ctx):
+        self.logger.info(f"{ctx.message.author} triggered add()")
         if self.game_on:
             if not self.game_full:
                 ret = await self.player_add(ctx.message.author)
@@ -88,8 +123,9 @@ class PUG(commands.Cog, name="Pick-up Game"):
         else:
             await ctx.send(f'No game on')
 
-    @commands.command()
+    @commands.command(aliases=['rem'], help="- Removes yourself from an active pick-up game")
     async def remove(self, ctx):
+        self.logger.info(f"{ctx.message.author} triggered remove()")
         if self.game_on:
             ret = await self.player_remove(ctx.message.author)
             if ret:
@@ -100,9 +136,10 @@ class PUG(commands.Cog, name="Pick-up Game"):
         else:
             await ctx.send(f'No game on')
 
-    @commands.command()
+    @commands.command(aliases=['kp'], hidden=True)
     @commands.has_any_role('admin', 'pug-admin', 'captain')
     async def kickplayer(self, ctx, member : discord.Member):
+        self.logger.info(f"{ctx.message.author} triggered kickplayer()")
         if self.game_on:
             ret = await self.player_remove(member.mention)
             if ret:
@@ -112,6 +149,23 @@ class PUG(commands.Cog, name="Pick-up Game"):
                 await ctx.send(f'Player not added')
         else:
             await ctx.send(f'No game on')
+
+    @commands.command(help="- Changes the map of the active game")
+    @commands.has_any_role('admin', 'pug-admin', 'captain')
+    async def map(self, ctx, map):
+        self.logger.info(f"{ctx.message.author} triggered map()")
+        if map in self.map_pool:
+            self.game_map = map
+            await ctx.send(f"Map changed to {self.game_map}")
+        else:
+            await ctx.send(f"Invalid map name, !maps to see valid maps.")
+        return
+
+    @commands.command(help="- Lists the maps in the map pool")
+    @commands.has_any_role('player')
+    async def maps(self, ctx):
+        self.logger.info(f"{ctx.message.author} triggered maps()")
+        await ctx.send(f"Map pool: {', '.join(self.map_pool)}")
 
     ## # # # # # # # #
     # Game functions #
@@ -155,12 +209,32 @@ class PUG(commands.Cog, name="Pick-up Game"):
         if self.player_count == self.max_players:
             self.game_full = True
             await ctx.send(f'Game is full! PM\'ing connection details to all players')
+            await self.change_password(self.game_server)
+            valve.rcon.execute(self.game_server, self.rcon_password, f"changelevel {self.game_map}")
             for player in self.players:
-                await player.send(f'Your Pick-up Game is ready. Please connect to steam://connect/{self.servers[0][0]}:{self.servers[0][1]}/{self.passwords[0]}')
+                await player.send(f'Your Pick-up Game is ready. Please connect to steam://connect/{self.game_server[0]}:{self.game_server[1]}/{self.game_password}')
                 lineup = await self.game_status()
                 await player.send(f'{lineup}')
             await self.game_stop()
+            self.used_servers.append(self.game_server)
+        return
     
+    async def find_server(self):
+        for address in self.servers:
+            try:
+                with valve.source.a2s.ServerQuerier(address) as server:
+                    player_count = server.info()["player_count"]
+                    if player_count < 1:
+                        return (server.host, server.port)
+            except valve.source.NoResponseError as e:
+                raise e
+
+    async def change_password(self, address):
+        self.game_password = random.choice(self.passwords)
+        command = f"sv_password {self.game_password}"
+        valve.rcon.execute(address, self.rcon_password, command)
+        return
+
     # @tasks.loop(seconds=1, count=10)
     # async def game_countdown(self):
     #     if not self.game_full:
@@ -206,6 +280,33 @@ class PUG(commands.Cog, name="Pick-up Game"):
             return True
         else:
             return False
+
+    ## # # # # # # # #
+    # Loop functions #
+    ## # # # # # # # #
+
+    @tasks.loop(seconds=60)
+    async def reset_password(self):
+        print("Looping!")
+        for address in self.used_servers:
+            try:
+                with valve.source.a2s.ServerQuerier(address) as server:
+                    player_count = server.info()["player_count"]
+                    if player_count < 1:
+                        print(f"Changing sv_password of server {server}")
+                        valve.rcon.execute(address, self.rcon_password, "sv_password wedontreallycare")
+                    else:
+                        print(f"Server still in use, not changing password")
+            except valve.source.NoResponseError:
+                pass
+
+    ## # # # # # # # # # # # #
+    # Cleanup when unloading #
+    ## # # # # # # # # # # # #
+
+    def cog_unload(self):
+        self.logger.info("Extension pug is being unloaded!")
+        self.logger.handlers = []
 
 def setup(client):
     client.add_cog(PUG(client))
