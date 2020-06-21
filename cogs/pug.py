@@ -76,6 +76,7 @@ class PUG(commands.Cog, name="Pick-up Game"):
                     await ctx.send(f'Game started! This game will be played on map {self.game_map} and server {self.game_server[0]}:{self.game_server[1]}')
                     self.game_message = await ctx.send(await self.game_status())
                     await self.game_message.pin()
+                    await self.change_password(address=self.game_server, password="temppassword")
             else:
                 await ctx.send(f'Game already on')
 
@@ -241,11 +242,14 @@ class PUG(commands.Cog, name="Pick-up Game"):
                 self.logger.warning(f"Could not query server {address} to see if it is open")
                 pass
 
-    async def change_password(self, address):
-        self.game_password = random.choice(self.passwords)
-        command = f"sv_password {self.game_password}"
-        valve.rcon.execute(address, self.rcon_password, command)
-        return
+    async def change_password(self, address, password=None):
+        if password is None:
+            self.game_password = random.choice(self.passwords)
+            command = f"sv_password {self.game_password}"
+            valve.rcon.execute(address, self.rcon_password, command)
+        else:
+            command = f"sv_password {password}"
+            valve.rcon.execute(address, self.rcon_password, command)
 
     async def game_update_pin(self):
         await self.game_message.edit(content=(await self.game_status()))
@@ -303,13 +307,14 @@ class PUG(commands.Cog, name="Pick-up Game"):
             await self.client.ctx.send('No longer full, cancelling countdown')
         else:
             await self.client.ctx.send(f'Game commencing! PM\'ing connection details to all players')
-            await self.change_password(self.game_server)
             valve.rcon.execute(self.game_server, self.rcon_password, f"changelevel {self.game_map}")
+            await self.change_password(address=self.game_server)
             for player in self.players:
                 await player.send(f'Your Pick-up Game is ready. Please connect to steam://connect/{self.game_server[0]}:{self.game_server[1]}/{self.game_password}')
                 lineup = await self.game_status()
                 await player.send(f'{lineup}')
                 self.used_servers.append(self.game_server)
+                self.game_countdown.restart()
             await self.game_stop()
             
     @tasks.loop(seconds=600)
