@@ -314,7 +314,7 @@ class PUG(commands.Cog, name="Pick-up Game"):
                 lineup = await self.game_status()
                 await player.send(f'{lineup}')
                 self.used_servers.append(self.game_server)
-                self.game_countdown.restart()
+                self.reset_password.restart()
             await self.game_stop()
             
     @tasks.loop(seconds=600)
