@@ -242,14 +242,9 @@ class PUG(commands.Cog, name="Pick-up Game"):
                 self.logger.warning(f"Could not query server {address} to see if it is open")
                 pass
 
-    async def change_password(self, address, password=None):
-        if password is None:
-            self.game_password = random.choice(self.passwords)
-            command = f"sv_password {self.game_password}"
-            valve.rcon.execute(address, self.rcon_password, command)
-        else:
-            command = f"sv_password {password}"
-            valve.rcon.execute(address, self.rcon_password, command)
+    async def change_password(self, address, password):
+        command = f"sv_password {password}"
+        valve.rcon.execute(address, self.rcon_password, command)
 
     async def game_update_pin(self):
         await self.game_message.edit(content=(await self.game_status()))
@@ -292,7 +287,8 @@ class PUG(commands.Cog, name="Pick-up Game"):
     # Loop functions #
     ## # # # # # # # #
 
-    @tasks.loop(seconds=1, count=60)
+    # @tasks.loop(seconds=1, count=60)
+    @tasks.loop(seconds=1, count=5)
     async def game_countdown(self):
         if not self.game_full:
             self.logger.info("Game is no longer full, cancelling.")
@@ -306,15 +302,16 @@ class PUG(commands.Cog, name="Pick-up Game"):
         if self.game_countdown.is_being_cancelled():
             await self.client.ctx.send('No longer full, cancelling countdown')
         else:
+            self.reset_password.restart()
             await self.client.ctx.send(f'Game commencing! PM\'ing connection details to all players')
             valve.rcon.execute(self.game_server, self.rcon_password, f"changelevel {self.game_map}")
-            await self.change_password(address=self.game_server)
+            self.game_password = random.choice(self.passwords)
             for player in self.players:
                 await player.send(f'Your Pick-up Game is ready. Please connect to steam://connect/{self.game_server[0]}:{self.game_server[1]}/{self.game_password}')
                 lineup = await self.game_status()
                 await player.send(f'{lineup}')
-                self.used_servers.append(self.game_server)
-                self.reset_password.restart()
+            await self.change_password(address=self.game_server, password=f'{self.game_password}')
+            self.used_servers.append(self.game_server)
             await self.game_stop()
             
     @tasks.loop(seconds=600)
@@ -345,6 +342,7 @@ class PUG(commands.Cog, name="Pick-up Game"):
         self.logger.info("Extension pug is being unloaded!")
         self.logger.handlers = []
         self.reset_password.cancel()
+        # self.game_stop()
 
 def setup(client):
     client.add_cog(PUG(client))
