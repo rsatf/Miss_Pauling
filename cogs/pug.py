@@ -60,25 +60,37 @@ class PUG(commands.Cog, name="Pick-up Game"):
     @commands.has_any_role('admin', 'pug-admin', 'captain')
     async def start(self, ctx, size=12):
         self.logger.info(f"{ctx.message.author} triggered start()")
-        if ctx.message.guild.id == self.game_guild and ctx.message.channel.id == self.game_channel:
-            if not self.game_on:
-                self.game_server = await self.find_server()
-                if self.game_server is None:
-                    await ctx.send("No open servers to use, not starting")
-                    return
-                if self.game_server in self.used_servers:
-                    self.used_servers.remove(self.game_server)
-                self.game_on = True
-                self.max_players = size
-                self.game_map = random.choice(self.map_pool)
-                ret = await self.game_reset(size)
-                if ret:
-                    await ctx.send(f'Game started! This game will be played on map {self.game_map} and server {self.game_server[0]}:{self.game_server[1]}')
-                    self.game_message = await ctx.send(await self.game_status())
-                    await self.game_message.pin()
-                    await self.change_password(address=self.game_server, password="temppassword")
-            else:
-                await ctx.send(f'Game already on')
+
+        if ctx.message.guild.id != self.game_guild:
+            await ctx.send(f'Got message from unknown guild')
+            return
+        
+        if ctx.message.channel != self.game_channel:
+            await ctx.send(f'Got message from unknown channel')
+            return
+        
+        if self.game_on:
+            await ctx.send(f'Game already on')
+            return
+        
+        self.game_server = await self.find_server()
+        if self.game_server is None:
+            await ctx.send("No open servers to use, not starting")
+            return
+        
+        if self.game_server in self.used_servers:
+            self.used_servers.remove(self.game_server)
+        
+        self.game_on = True
+        self.max_players = size
+        self.game_map = random.choice(self.map_pool)
+        ret = await self.game_reset(size)
+        
+        if ret:
+            await ctx.send(f'Game started! This game will be played on map {self.game_map} and server {self.game_server[0]}:{self.game_server[1]}')
+            self.game_message = await ctx.send(await self.game_status())
+            await self.game_message.pin()
+            await self.change_password(address=self.game_server, password="temppassword")
 
     @commands.command(help="- Stops an active pick-up game")
     @commands.has_any_role('admin', 'pug-admin', 'captain')
