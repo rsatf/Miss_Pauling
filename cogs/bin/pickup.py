@@ -123,8 +123,39 @@ class Game():
                 self.teams[index] = [self.empty_slot if x == player else x for x in self.teams[index]]
         return
 
-    def transform(self):
-        pass
+    def transform(self, teams: int = 2, mode="6v6") -> None:
+        if self.game_on is False:
+            raise GameNotOnError("No game on")
+
+        players = []
+        for index, value in enumerate(self.teams):
+            for slot, player in enumerate(self.teams[index]):
+                if player != self.empty_slot:
+                    players.append(player)
+
+        if type(mode) == int:
+            self.team_size = mode
+        elif type(mode) == str:
+            if mode == "2v2":
+                self.team_size = 2
+            elif mode == "6v6":
+                self.team_size = 6
+            elif mode == "7v7":
+                self.team_size = 7
+            elif mode == "9v9":
+                self.team_size = 9
+            else:
+                self.team_size = 6
+
+        if len(players) > teams * self.team_size:
+            raise CannotTransformError("Target game size too small.")
+
+        self.stop()
+        self.start(teams, mode)
+        for player in players:
+            self.add(player)
+        return
+
 
     def _team_count(self, team: list) -> int:
         player_count = 0
@@ -180,6 +211,10 @@ class GameNotOnError(ValueError):
 
         super().__init__(message)
 
+class CannotTransformError(ValueError):
+    def __init__(self, message):
+
+        super().__init__(message)
 
 def main():
     if __name__ == "__main__":
@@ -202,38 +237,43 @@ def main():
             game.start(2, 6)
         except GameOnError as e:
             print(f"Error: {e}")
-        game.add(russ)
-        print(game.status())
-        game.stop()
-        game.start(2, 6)
-        print(game.status())
+        # game.add(russ)
+        # print(game.status())
+        # game.stop()
+        # game.start(2, 6)
+        # print(game.status())
 
-        # try:
-        #     game.add(russ, 1)
-        #     game.add(biltong, 1)
-        #     game.add(ployful, 1)
-        #     game.add(auto, 1)
-        #     game.add(wanderer, 1)
-        #     game.add(skiba, 1)
-        #     game.add(fluff)
-        #     game.add(spoon)
-        #     game.add(gimlief)
-        #     game.add(beetle)
-        #     game.add(jan)
-        #     game.add(chrome)
-        #     # game.add(skye)
-        #     # game.add(cod)
-        #     # game.add(russ)
-        #     # game.add(biltong)
-        #     # game.add(ployful)
-        #     # game.add(auto)
-        #     # game.add(wanderer)
-        #     # game.add(skiba)
-        #     # game.add(fluff)
-        # except (InvalidTeamError, TeamFullError, PlayerAddedError, GameFullError)as e:
-        #     print(f'Error: {e}')
+        try:
+            game.add(russ, 1)
+            game.add(biltong, 1)
+            game.add(ployful, 1)
+            game.add(auto, 1)
+            game.add(wanderer, 1)
+            game.add(skiba, 1)
+            game.add(fluff)
+            game.add(spoon)
+            game.add(gimlief)
+            game.add(beetle)
+            game.add(jan)
+            game.add(chrome)
+            # game.add(skye)
+            # game.add(cod)
+            # game.add(russ)
+            # game.add(biltong)
+            # game.add(ployful)
+            # game.add(auto)
+            # game.add(wanderer)
+            # game.add(skiba)
+            # game.add(fluff)
+        except (InvalidTeamError, TeamFullError, PlayerAddedError, GameFullError)as e:
+            print(f'Error: {e}')
         # print(game.status())
         # game.remove(russ)
-        # print(game.status())
+        print(game.status())
+        try:
+            game.transform(1, 12)
+        except CannotTransformError as e:
+            print(f'Error: {e}')
+        print(game.status())
 
 main()
