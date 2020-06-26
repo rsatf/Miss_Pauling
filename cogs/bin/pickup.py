@@ -88,7 +88,7 @@ class Game():
             raise PlayerAddedError("Player already added.")
 
         eligible_teams = []
-        for index, value in enumerate(self.teams):
+        for index, _ in enumerate(self.teams):
             if not self._is_full(self.teams[index]):
                 eligible_teams.append(index)
 
@@ -118,7 +118,7 @@ class Game():
         if not any(player in x for x in self.teams):
             raise PlayerNotAddedError("Player is not added.")
         
-        for index, value in enumerate(self.teams):
+        for index, _ in enumerate(self.teams):
             if player in self.teams[index]:
                 self.teams[index] = [self.empty_slot if x == player else x for x in self.teams[index]]
         return
@@ -128,8 +128,8 @@ class Game():
             raise GameNotOnError("No game on")
 
         players = []
-        for index, value in enumerate(self.teams):
-            for slot, player in enumerate(self.teams[index]):
+        for index, _ in enumerate(self.teams):
+            for _, player in enumerate(self.teams[index]):
                 if player != self.empty_slot:
                     players.append(player)
 
@@ -156,6 +156,35 @@ class Game():
             self.add(player)
         return
 
+    def balance(self) -> None:
+        if self.game_on is False:
+            raise GameNotOnError("No game on")
+
+        pool = []
+        new_teams = []
+        # Adds all players to the pool list
+        for team in self.teams:
+            for player in team:
+                if player != self.empty_slot:
+                    pool.append(player)
+        print(f'Players: {len(pool)}')
+
+        # Sorts the pool list, highest elo first
+        pool.sort(key=lambda x: x.elo, reverse=True)
+
+        # Adds the right amount of empty lists to new_teams as there are current teams
+        for _ in range(len(self.teams)):
+            new_teams.append([])
+
+        for player in range(len(pool)):
+            # We put the highest elo player in the first team
+            new_teams[0].append(pool.pop(0))
+            # We sort the teams such that the lowest ranked team becomes new_teams[0]
+            # So that we can add the next highest skilled player to that team
+            new_teams.sort(key=lambda x: sum(i.elo for i in x), reverse=False)
+            # print(new_teams)
+        self.teams = new_teams
+        return
 
     def _team_count(self, team: list) -> int:
         player_count = 0
@@ -219,22 +248,26 @@ class CannotTransformError(ValueError):
 def main():
     if __name__ == "__main__":
         game = Game()
-        russ = Player("Russ", 1500)
-        skiba = Player("skiba", 1500)
-        biltong = Player("biltong", 1500)
-        ployful = Player("ployful", 1500)
-        auto = Player("auto", 1500)
-        wanderer = Player("wanderer", 1500)
-        fluff = Player("fluff", 1500)
-        spoon = Player("spoon", 1500)
-        gimlief = Player("gimlief", 1500)
-        beetle = Player("beetle", 1500)
-        jan = Player("jan", 1500)
-        chrome = Player("chrome", 1500)
-        skye = Player("skye", 1500)
-        cod = Player("cod", 1500)
+        russ = Player("Russ", random.randint(1500, 2000))
+        skiba = Player("skiba", random.randint(1500, 2000))
+        biltong = Player("biltong", random.randint(1500, 2000))
+        ployful = Player("ployful", random.randint(1500, 2000))
+        auto = Player("auto", random.randint(1500, 2000))
+        wanderer = Player("wanderer", random.randint(1500, 2000))
+        fluff = Player("fluff", random.randint(1500, 2000))
+        spoon = Player("spoon", random.randint(1500, 2000))
+        gimlief = Player("gimlief", random.randint(1500, 2000))
+        beetle = Player("beetle", random.randint(1500, 2000))
+        jan = Player("jan", random.randint(1500, 2000))
+        chrome = Player("chrome", random.randint(1500, 2000))
+        # skye = Player("skye", random.randint(1500, 2000))
+        # cod = Player("cod", random.randint(1500, 2000))
         try:
-            game.start(2, 6)
+            game.balance()
+        except GameNotOnError as e:
+            print(f'Error: {e}')
+        try:
+            game.start(3, 4)
         except GameOnError as e:
             print(f"Error: {e}")
         # game.add(russ)
@@ -242,14 +275,13 @@ def main():
         # game.stop()
         # game.start(2, 6)
         # print(game.status())
-
         try:
-            game.add(russ, 1)
-            game.add(biltong, 1)
-            game.add(ployful, 1)
-            game.add(auto, 1)
-            game.add(wanderer, 1)
-            game.add(skiba, 1)
+            game.add(russ)
+            game.add(biltong)
+            game.add(ployful)
+            game.add(auto)
+            game.add(wanderer)
+            game.add(skiba)
             game.add(fluff)
             game.add(spoon)
             game.add(gimlief)
@@ -270,10 +302,12 @@ def main():
         # print(game.status())
         # game.remove(russ)
         print(game.status())
-        try:
-            game.transform(1, 12)
-        except CannotTransformError as e:
-            print(f'Error: {e}')
+        # try:
+        #     game.transform(1, 12)
+        # except CannotTransformError as e:
+        #     print(f'Error: {e}')
+        # print(game.status())
+        game.balance()
         print(game.status())
 
 main()
