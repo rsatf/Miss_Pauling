@@ -1,11 +1,5 @@
-import discord
 import random
-
-class Player():
-    
-    def __init__(self, nick: str, elo: int):
-        self.nick = nick
-        self.elo = elo
+from player import Player
 
 class Game():
 
@@ -167,21 +161,20 @@ class Game():
             for player in team:
                 if player != self.empty_slot:
                     pool.append(player)
-        print(f'Players: {len(pool)}')
 
-        # Sorts the pool list, highest elo first
-        pool.sort(key=lambda x: x.elo, reverse=True)
+        # Sorts the pool list, highest rating first
+        pool.sort(key=lambda x: x.rating, reverse=True)
 
         # Adds the right amount of empty lists to new_teams as there are current teams
         for _ in range(len(self.teams)):
             new_teams.append([])
 
         for player in range(len(pool)):
-            # We put the highest elo player in the first team
+            # We put the highest rating player in the first team
             new_teams[0].append(pool.pop(0))
             # We sort the teams such that the lowest ranked team becomes new_teams[0]
             # So that we can add the next highest skilled player to that team
-            new_teams.sort(key=lambda x: sum(i.elo for i in x), reverse=False)
+            new_teams.sort(key=lambda x: sum(i.rating for i in x), reverse=False)
             # print(new_teams)
         self.teams = new_teams
         return
@@ -244,70 +237,3 @@ class CannotTransformError(ValueError):
     def __init__(self, message):
 
         super().__init__(message)
-
-def main():
-    if __name__ == "__main__":
-        game = Game()
-        russ = Player("Russ", random.randint(1500, 2000))
-        skiba = Player("skiba", random.randint(1500, 2000))
-        biltong = Player("biltong", random.randint(1500, 2000))
-        ployful = Player("ployful", random.randint(1500, 2000))
-        auto = Player("auto", random.randint(1500, 2000))
-        wanderer = Player("wanderer", random.randint(1500, 2000))
-        fluff = Player("fluff", random.randint(1500, 2000))
-        spoon = Player("spoon", random.randint(1500, 2000))
-        gimlief = Player("gimlief", random.randint(1500, 2000))
-        beetle = Player("beetle", random.randint(1500, 2000))
-        jan = Player("jan", random.randint(1500, 2000))
-        chrome = Player("chrome", random.randint(1500, 2000))
-        # skye = Player("skye", random.randint(1500, 2000))
-        # cod = Player("cod", random.randint(1500, 2000))
-        try:
-            game.balance()
-        except GameNotOnError as e:
-            print(f'Error: {e}')
-        try:
-            game.start(3, 4)
-        except GameOnError as e:
-            print(f"Error: {e}")
-        # game.add(russ)
-        # print(game.status())
-        # game.stop()
-        # game.start(2, 6)
-        # print(game.status())
-        try:
-            game.add(russ)
-            game.add(biltong)
-            game.add(ployful)
-            game.add(auto)
-            game.add(wanderer)
-            game.add(skiba)
-            game.add(fluff)
-            game.add(spoon)
-            game.add(gimlief)
-            game.add(beetle)
-            game.add(jan)
-            game.add(chrome)
-            # game.add(skye)
-            # game.add(cod)
-            # game.add(russ)
-            # game.add(biltong)
-            # game.add(ployful)
-            # game.add(auto)
-            # game.add(wanderer)
-            # game.add(skiba)
-            # game.add(fluff)
-        except (InvalidTeamError, TeamFullError, PlayerAddedError, GameFullError)as e:
-            print(f'Error: {e}')
-        # print(game.status())
-        # game.remove(russ)
-        print(game.status())
-        # try:
-        #     game.transform(1, 12)
-        # except CannotTransformError as e:
-        #     print(f'Error: {e}')
-        # print(game.status())
-        game.balance()
-        print(game.status())
-
-main()
