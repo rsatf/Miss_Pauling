@@ -1,5 +1,5 @@
 import random
-from player import Player
+from cogs.bin.player import Player
 
 class Game():
 
@@ -52,7 +52,7 @@ class Game():
 
     def restart(self, teams: int = 2, mode="6v6"):
         self.stop()
-        self.start(teams, mode)
+        self.start(teams=teams, mode=mode)
         return
     
     def status(self) -> str:
@@ -67,14 +67,15 @@ class Game():
             team_empty = []
             for player in team:
                 if player != self.empty_slot:
-                    team_lineup.append(player.nick)
+                    team_lineup.append(player.name)
                 else:
                     team_empty.append(player)
             all_teams += f"Team {team_count} [{len(team_lineup)}/{len(team)}] Players: ({'), ('.join(team_lineup + team_empty)}"
             all_teams += ") "
         return all_teams
 
-    def add(self, player: Player, team: int = None) -> None:
+    # def add(self, player: Player, team: int = None) -> None:
+    def add(self, player, team: int = None) -> None:
         if self.game_on is False:
             raise GameNotOnError("No game on.")
 

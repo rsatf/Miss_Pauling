@@ -6,6 +6,8 @@ import random
 import logging
 import os
 from dotenv import load_dotenv
+from cogs.bin.pickup import Game, GameOnError, GameNotOnError, PlayerAddedError, GameFullError, TeamFullError, PlayerNotAddedError
+from cogs.bin.player import Player
 
 class PUG(commands.Cog, name="Pick-up Game"):
 
@@ -25,14 +27,14 @@ class PUG(commands.Cog, name="Pick-up Game"):
         self.client = client
         self.client.ctx = None
         self.game_guild = int(os.getenv('PRIMARY_GUILD'))
-        self.game_channel = int(os.getenv('PRIMARY_CHANNEL'))
-        self.empty_slot = "(?)"
-        self.game_on = False
-        self.game_full = False
-        self.player_count = 0
-        self.max_players = 12
-        self.start_delay = 10
-        self.players = []
+        # self.game_channel = int(os.getenv('PRIMARY_CHANNEL'))
+        # self.empty_slot = "(?)"
+        # self.game_on = False
+        # self.game_full = False
+        # self.player_count = 0
+        # self.max_players = 12
+        # self.start_delay = 10
+        # self.players = []
         self.game_message = None
         self.servers = eval(os.getenv('PUG_SERVERS'))
         self.passwords = eval(os.getenv('PUG_PASSWORDS'))
@@ -42,6 +44,23 @@ class PUG(commands.Cog, name="Pick-up Game"):
         self.map_pool = eval(os.getenv('MAP_POOL'))
         self.game_map = None
         self.used_servers = []
+        self.channels = eval(os.getenv('PUG_CHANNELS'))
+        self.chaninfo = {}
+        self.pug_init()
+
+    def pug_init(self):
+        for channel in self.channels:
+            self.chaninfo[channel] = {}
+            self.chaninfo[channel]['ctx'] = None
+            self.chaninfo[channel]['game_full'] = False
+            self.chaninfo[channel]['game_message'] = None
+            self.chaninfo[channel]['game_server'] = None
+            self.chaninfo[channel]['game_password'] = None
+            self.chaninfo[channel]['game_map'] = None
+            self.chaninfo[channel]['player_count'] = 0
+            self.chaninfo[channel]['added_players'] = {}
+            game = Game(2, 6)
+            self.chaninfo[channel]['game'] = game
 
     # @commands.Cog.listener()
     # async def on_reaction_add(self, reaction, user):
@@ -58,110 +77,205 @@ class PUG(commands.Cog, name="Pick-up Game"):
 
     @commands.command(help="- Starts a pick-up game")
     @commands.has_any_role('admin', 'pug-admin', 'captain')
-    async def start(self, ctx, size=12):
+    async def start(self, ctx, teams=2, mode="6v6"):
+        context = self.chaninfo[ctx.channel.id]
         self.logger.info(f"{ctx.message.author} triggered start()")
-        if ctx.message.guild.id == self.game_guild and ctx.message.channel.id == self.game_channel:
-            if not self.game_on:
-                self.game_server = await self.find_server()
-                if self.game_server is None:
-                    await ctx.send("No open servers to use, not starting")
-                    return
-                if self.game_server in self.used_servers:
-                    self.used_servers.remove(self.game_server)
-                self.game_on = True
-                self.max_players = size
-                self.game_map = random.choice(self.map_pool)
-                ret = await self.game_reset(size)
-                if ret:
-                    await ctx.send(f'Game started! This game will be played on map {self.game_map} and server {self.game_server[0]}:{self.game_server[1]}')
-                    self.game_message = await ctx.send(await self.game_status())
-                    await self.game_message.pin()
-                    await self.change_password(address=self.game_server, password="temppassword")
-            else:
-                await ctx.send(f'Game already on')
+
+        if ctx.message.guild.id != self.game_guild:
+            return
+            
+        if ctx.message.channel.id not in self.chaninfo.keys():
+            return
+
+        if context['game'].game_on:
+            await ctx.send(f'Game already on')
+            return
+
+        if not context['game'].game_on:
+            # self.game_server = await self.find_server()
+            # if self.game_server is None:
+            #     await ctx.send("No open servers to use, not starting")
+            #     return
+            # if self.game_server in self.used_servers:
+            #     self.used_servers.remove(self.game_server)
+            # context['game'].game_on = True
+            # context['game'].max_players = size
+            context['game_map'] = random.choice(self.map_pool)
+            try:
+                context['game'].start(teams, mode)
+            except GameOnError as e:
+                await ctx.send(f'{e}')
+                return
+
+            await ctx.send(f'Game started!')
+            context['game_message'] = await ctx.send(context['game'].status())
+            await context['game_message'].pin()
+            # await self.change_password(address=self.game_server, password="temppassword")
+        return
 
     @commands.command(help="- Stops an active pick-up game")
     @commands.has_any_role('admin', 'pug-admin', 'captain')
     async def stop(self, ctx):
+        context = self.chaninfo[ctx.channel.id]
         self.logger.info(f"{ctx.message.author} triggered stop()")
-        if ctx.message.guild.id == self.game_guild and ctx.message.channel.id == self.game_channel:
-            if self.game_on:
-                ret = await self.game_stop()
-                if ret:
-                    await ctx.send(f'Game stopped.')
-            else:
-                await ctx.send(f'No game active.')
+
+        if ctx.message.guild.id != self.game_guild:
+            return
+            
+        if ctx.message.channel.id not in self.chaninfo.keys():
+            return
+
+        if not context['game'].game_on:
+            await ctx.send(f'No game on.')
+            return
+
+        if context['game'].game_on:
+            try:
+                context['game'].stop()
+                await context['game_message'].unpin()
+                await ctx.send("Game stopped.")
+            except (GameOnError, GameNotOnError) as e:
+                await ctx.send(f'{e}')
+                return
+        return
 
     @commands.command(aliases=['re'], help="- Restarts an active pick-up game. Can take an integer argument for the size of the new pug")
     @commands.has_any_role('admin', 'pug-admin', 'captain')
     async def restart(self, ctx, size=0):
+        context = self.chaninfo[ctx.channel.id]
         self.logger.info(f"{ctx.message.author} triggered restart()")
-        if ctx.message.guild.id == self.game_guild and ctx.message.channel.id == self.game_channel:
-            if self.game_on:
-                ret = await self.game_reset(size)
-                if ret:
-                    await ctx.send(f'Game restarted!')
-                    self.game_message = await ctx.send(await self.game_status())
-                    await self.game_message.pin()
-        else:
-            await ctx.send(f'No game active')
+
+        if ctx.message.guild.id != self.game_guild:
+            return
+            
+        if ctx.message.channel.id not in self.chaninfo.keys():
+            return
+            
+        if not context['game'].game_on:
+            await ctx.send(f'No game on.')
+            return
+
+        if context['game'].game_on:
+            try:
+                await context['game_message'].unpin()
+                context['game'].restart(1, 12)
+                await ctx.send(f'Game restarted!')
+                context['game_message'] = await ctx.send(context['game'].status())
+                await context['game_message'].pin()
+            except GameOnError as e:
+                await ctx.send(f'{e}')
+                return
+        return
 
     @commands.command(help="- Checks the status of an active pick-up game")
     async def status(self, ctx):
+        context = self.chaninfo[ctx.channel.id]
         self.logger.info(f"{ctx.message.author} triggered status()")
-        if ctx.message.guild.id == self.game_guild and ctx.message.channel.id == self.game_channel:
-            if self.game_on:
-                await ctx.send(await self.game_status())
-            else:
-                await ctx.send(f'No game on')
+
+        if ctx.message.guild.id != self.game_guild:
+            return
+            
+        if ctx.message.channel.id not in self.chaninfo.keys():
+            return
+
+        if not context['game'].game_on:
+            await ctx.send(f'No game on.')
+            return
+
+        if context['game'].game_on:
+            await ctx.send(context['game'].status())
+        return
 
     @commands.command(help="- Adds yourself to an active pick-up game")
     @commands.has_any_role('player')
     async def add(self, ctx):
+        context = self.chaninfo[ctx.channel.id]
         self.logger.info(f"{ctx.message.author} triggered add()")
-        if ctx.message.guild.id == self.game_guild and ctx.message.channel.id == self.game_channel:
-            if self.game_on:
-                if not self.game_full:
-                    ret = await self.player_add(ctx.message.author)
-                    if ret:
-                        await self.game_update_pin()
-                        await self.status(ctx)
-                        await self.game_start(ctx)
-                    else:
-                        await ctx.send(f'Already added')
-                else:
-                    await ctx.send(f'Game is full')
-            else:
-                await ctx.send(f'No game on')
+
+        if ctx.message.guild.id != self.game_guild:
+            return
+            
+        if ctx.message.channel.id not in self.chaninfo.keys():
+            return
+
+        if not context['game'].game_on:
+            await ctx.send(f'No game on.')
+            return
+
+        if ctx.message.author.id in context['added_players'].keys():
+            await ctx.send(f'Already added.')
+            return
+
+        for key, value in self.chaninfo.items():
+            print(f'Key {key}, Value {value}')
+            if ctx.message.author.id in value['added_players'].keys():
+                await ctx.send(f'Already added elsewhere.')
+                return
+
+        player = Player(ctx.message.author, 0)
+
+        try:
+            context['added_players'][ctx.message.author.id] = player
+            context['game'].add(context['added_players'][ctx.message.author.id])
+        except (PlayerAddedError, GameFullError, TeamFullError) as e:
+            del context['added_players'][ctx.message.author.id]
+            await ctx.send(f'{e}')
+            return
+        
+        await self.game_update_pin(ctx.channel.id)
+        context['player_count'] += 1
+        await ctx.send(context['game'].status())
+        #try start game?
+        return
 
     @commands.command(aliases=['rem'], help="- Removes yourself from an active pick-up game")
     async def remove(self, ctx):
+        context = self.chaninfo[ctx.channel.id]
         self.logger.info(f"{ctx.message.author} triggered remove()")
-        if ctx.message.guild.id == self.game_guild and ctx.message.channel.id == self.game_channel:
-            if self.game_on:
-                ret = await self.player_remove(ctx.message.author)
-                if ret:
-                    await self.game_update_pin()
-                    await self.status(ctx)
-                else:
-                    await ctx.send(f'Not added')
-            else:
-                await ctx.send(f'No game on')
 
-    @commands.command(aliases=['kp'], hidden=True)
+        if ctx.message.guild.id != self.game_guild:
+            return
+            
+        if ctx.message.channel.id not in self.chaninfo.keys():
+            return
+
+        if not context['game'].game_on:
+            await ctx.send(f'No game on')
+            
+        if context['game'].game_on:
+            try:
+                context['game'].remove(context['added_players'][ctx.message.author.id])
+            except (GameNotOnError, PlayerNotAddedError, KeyError) as e:
+                await ctx.send(f'{e}')
+                return
+
+        await self.game_update_pin(ctx.channel.id)
+        await ctx.send(context['game'].status())
+        return
+
+    @commands.command(aliases=['pk'], hidden=True)
     @commands.has_any_role('admin', 'pug-admin', 'captain')
-    async def kickplayer(self, ctx, member : discord.Member):
-        self.logger.info(f"{ctx.message.author} triggered kickplayer()")
-        if ctx.message.guild.id == self.game_guild and ctx.message.channel.id == self.game_channel:
-            if self.game_on:
-                ret = await self.player_remove(member.mention)
-                if ret:
-                    await self.game_update_pin()
-                    await self.status(ctx)
-                else:
-                    await ctx.send(f'Player not added')
-            else:
-                await ctx.send(f'No game on')
+    async def playerkick(self, ctx, member : discord.Member):
+        context = self.chaninfo[ctx.channel.id]
+        self.logger.info(f"{ctx.message.author} triggered playerkick()")
+
+        if ctx.message.guild.id != self.game_guild:
+            return
+            
+        if ctx.message.channel.id not in self.chaninfo.keys():
+            return
+
+        if not context['game'].game_on:
+            await ctx.send(f'No game on')
+
+        if context['game'].game_on:
+            try:
+                context['game'].remove(context['added_players'][member.id])
+                await self.game_update_pin(ctx.channel.id)
+                await ctx.send(context['game'].status())
+            except (GameNotOnError, PlayerNotAddedError) as e:
+                await ctx.send(f'{e}')
+                return
 
     @commands.command(help="- Changes the map of the active game")
     @commands.has_any_role('admin', 'pug-admin', 'captain')
@@ -186,15 +300,15 @@ class PUG(commands.Cog, name="Pick-up Game"):
     # Game functions #
     ## # # # # # # # #
 
-    async def game_status(self):
-        lineup = []
-        empty = []
-        for player in self.players:
-            if player != self.empty_slot:
-                lineup.append(player.name)
-            else:
-                empty.append(player)
-        return f'({self.game_map}) Players [{self.player_count}/{self.max_players}]: {", ".join(lineup + empty)}'
+    # async def game_status(self):
+    #     lineup = []
+    #     empty = []
+    #     for player in self.players:
+    #         if player != self.empty_slot:
+    #             lineup.append(player.name)
+    #         else:
+    #             empty.append(player)
+    #     return f'({self.game_map}) Players [{self.player_count}/{self.max_players}]: {", ".join(lineup + empty)}'
 
     async def game_reset(self, size=0):
         if self.game_on:
@@ -246,8 +360,10 @@ class PUG(commands.Cog, name="Pick-up Game"):
         command = f"sv_password {password}"
         valve.rcon.execute(address, self.rcon_password, command)
 
-    async def game_update_pin(self):
-        await self.game_message.edit(content=(await self.game_status()))
+    async def game_update_pin(self, chan):
+        context = self.chaninfo[chan]
+        await context['game_message'].edit(content=(context['game'].status()))
+        # await self.game_message.edit(content=(await self.game_status()))
 
     ## # # # # # # # # #
     # Player functions #
