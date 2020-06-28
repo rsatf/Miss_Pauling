@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 import logging
+import traceback
 
 class Admin_Extensions(commands.Cog, name="Extensions"):
 
@@ -24,8 +25,9 @@ class Admin_Extensions(commands.Cog, name="Extensions"):
             self.client.load_extension(f'cogs.{extension}')
             self.logger.info(f"Loaded extension {extension}")
             await ctx.send(f'Loaded extension {extension}')
-        except:
+        except Exception as e:
             self.logger.warning(f"Failed to load extension {extension}.")
+            self.logger.warning(traceback.format_exc())
             await ctx.send(f'Failed to load extension {extension}')
 
     @commands.command(hidden=True)
@@ -35,8 +37,9 @@ class Admin_Extensions(commands.Cog, name="Extensions"):
             self.client.unload_extension(f'cogs.{extension}')
             self.logger.info(f"Unloaded extension {extension}")
             await ctx.send(f'Unloaded extension {extension}')
-        except:
+        except Exception as e:
             self.logger.warning(f"Failed to unload extension {extension}")
+            self.logger.warning(traceback.format_exc())
             await ctx.send(f"Failed to unload extension {extension}")
 
     @commands.command(hidden=True)
@@ -47,8 +50,9 @@ class Admin_Extensions(commands.Cog, name="Extensions"):
             self.client.load_extension(f'cogs.{extension}')
             self.logger.info(f"Reloaded extension {extension}")
             await ctx.send(f'Reloaded extension {extension}')
-        except:
+        except Exception as e:
             self.logger.warning(f"Reload of {extension} failed")
+            self.logger.warning(traceback.format_exc())
             await ctx.send(f"Reload of {extension} failed")
 
     ## # # # # # # # # # # # #
