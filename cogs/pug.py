@@ -48,9 +48,6 @@ class Timer():
             count -= 1
             await asyncio.sleep(1)
 
-        # Make a copy here so a !remove doesn't cause our for-loop up ahead to fail due to the data structure changing during the loop
-        # player_list = [x for x in context['added_players'].values()]
-
         if not context['game_full']:
             self.logger.info(f'{self.chan}: Game no longer full')
 
@@ -66,7 +63,6 @@ class Timer():
                 await player.player.send(connect_string)
             await self.game.change_password(address=context['game_server'], password=f'{context["game_password"]}')
             self.game.used_servers.append(context['game_server'])
-            # context['game'].stop()
             await context['game_message'].unpin()
             context['added_players'] = {}
             await self.loop.create_task(self.server_readd())
