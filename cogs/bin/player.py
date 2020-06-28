@@ -3,6 +3,7 @@ import discord
 class Player():
     
     def __init__(self, player: discord.Member, rating: int):
+        self.player = player
         self.id = player.id
         self.nick = player.nick
         self.name = player.name

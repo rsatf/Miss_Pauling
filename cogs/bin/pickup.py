@@ -176,7 +176,6 @@ class Game():
             # We sort the teams such that the lowest ranked team becomes new_teams[0]
             # So that we can add the next highest skilled player to that team
             new_teams.sort(key=lambda x: sum(i.rating for i in x), reverse=False)
-            # print(new_teams)
         self.teams = new_teams
         return
 
