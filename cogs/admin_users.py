@@ -27,23 +27,24 @@ class Admin_Users(commands.Cog, name="Users"):
 
     @commands.command(hidden=True)
     @commands.has_any_role('admin')
-    # async def kick(self, ctx, member : Discord.Member, *, reason=None):
-    async def kick(self, ctx, member, *, reason=None):
+    async def kick(self, ctx, member: discord.Member, *, reason=None):
+        self.logger.info(f"{ctx.channel.name}: {ctx.message.author} triggered kick()")
         await member.kick(reason=reason)
         await ctx.send(f'Kicked user {member.mention}')
         self.logger.info(f'Kicked user {member.mention}')
 
     @commands.command(hidden=True)
     @commands.has_any_role('admin')
-    # async def ban(self, ctx, member : Discord.Member, *, reason=None):
-    async def ban(self, ctx, member, *, reason=None):
+    async def ban(self, ctx, member: discord.Member, *, reason=None):
+        self.logger.info(f"{ctx.channel.name}: {ctx.message.author} triggered ban()")
         await member.ban(reason=reason)
         await ctx.send(f'Banned user {member.mention}')
         self.logger.info(f'Banned user {member.mention}')
 
     @commands.command(hidden=True)
     @commands.has_any_role('admin')
-    async def unban(self, ctx, *, member):
+    async def unban(self, ctx, *, member: discord.Member):
+        self.logger.info(f"{ctx.channel.name}: {ctx.message.author} triggered unban()")
         banned_users = await ctx.guild.bans()
         member_name, member_discriminator = member.split('#')
         for ban_entry in banned_users:

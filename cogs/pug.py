@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # pylint: disable=no-member
 # pylint: disable=E1101
 import logging
@@ -20,7 +21,7 @@ class Timer():
 
     log_format = logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s')
     logger = logging.getLogger('timer')
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
     file_handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
     file_handler.setFormatter(log_format)
     logger.addHandler(file_handler)
@@ -42,7 +43,7 @@ class Timer():
 
     async def countdown(self):
         context = self.game.chaninfo[self.chan]
-        count = 10
+        count = 60
         while count and context['game_full']:
             self.logger.info(f'{self.chan}: Game is still full. Checks remaining: {count}')
             count -= 1
@@ -69,7 +70,7 @@ class Timer():
 
     async def server_readd(self):
         context = self.game.chaninfo[self.chan]
-        await asyncio.sleep(10)
+        await asyncio.sleep(300)
         self.logger.info(f'Adding {context["game_server"]} back to to server pool')
         self.game.used_servers.remove(context["game_server"])
         self.game.servers.append(context["game_server"])
@@ -129,7 +130,7 @@ class PUG(commands.Cog, name="Pick-up Game"):
     @commands.has_any_role('admin', 'pug-admin', 'captain')
     async def start(self, ctx, teams=1, mode=12):
         context = self.chaninfo[ctx.channel.id]
-        self.logger.info(f"{ctx.message.author} triggered start()")
+        self.logger.info(f"{ctx.channel.name}: {ctx.message.author} triggered start()")
 
         if ctx.message.guild.id != self.game_guild:
             return
@@ -171,7 +172,7 @@ class PUG(commands.Cog, name="Pick-up Game"):
     @commands.has_any_role('admin', 'pug-admin', 'captain')
     async def stop(self, ctx):
         context = self.chaninfo[ctx.channel.id]
-        self.logger.info(f"{ctx.message.author} triggered stop()")
+        self.logger.info(f"{ctx.channel.name}: {ctx.message.author} triggered stop()")
 
         if ctx.message.guild.id != self.game_guild:
             return
@@ -202,7 +203,7 @@ class PUG(commands.Cog, name="Pick-up Game"):
     @commands.command(help="- Checks the status of an active pick-up game")
     async def status(self, ctx):
         context = self.chaninfo[ctx.channel.id]
-        self.logger.info(f"{ctx.message.author} triggered status()")
+        self.logger.info(f"{ctx.channel.name}: {ctx.message.author} triggered status()")
 
         if ctx.message.guild.id != self.game_guild:
             return
@@ -223,7 +224,7 @@ class PUG(commands.Cog, name="Pick-up Game"):
     @commands.has_any_role('player')
     async def add(self, ctx):
         context = self.chaninfo[ctx.channel.id]
-        self.logger.info(f"{ctx.message.author} triggered add()")
+        self.logger.info(f"{ctx.channel.name}: {ctx.message.author} triggered add()")
 
         if ctx.message.guild.id != self.game_guild:
             return
@@ -263,7 +264,7 @@ class PUG(commands.Cog, name="Pick-up Game"):
     @commands.command(aliases=['rem'], help="- Removes yourself from an active pick-up game")
     async def remove(self, ctx):
         context = self.chaninfo[ctx.channel.id]
-        self.logger.info(f"{ctx.message.author} triggered remove()")
+        self.logger.info(f"{ctx.channel.name}: {ctx.message.author} triggered remove()")
 
         if ctx.message.guild.id != self.game_guild:
             return
@@ -298,7 +299,7 @@ class PUG(commands.Cog, name="Pick-up Game"):
     @commands.has_any_role('admin', 'pug-admin', 'captain')
     async def playerkick(self, ctx, member : discord.Member):
         context = self.chaninfo[ctx.channel.id]
-        self.logger.info(f"{ctx.message.author} triggered playerkick()")
+        self.logger.info(f"{ctx.channel.name}: {ctx.message.author} triggered playerkick()")
 
         if ctx.message.guild.id != self.game_guild:
             return
@@ -317,6 +318,7 @@ class PUG(commands.Cog, name="Pick-up Game"):
             try:
                 context['game'].remove(context['added_players'][member.id])
                 del context['added_players'][member.id]
+                context['player_count'] -= 1
                 await self.game_update_pin(ctx.channel.id)
                 await self.status(ctx)
             except (GameNotOnError, PlayerNotAddedError) as e:
@@ -327,7 +329,7 @@ class PUG(commands.Cog, name="Pick-up Game"):
     @commands.has_any_role('admin', 'pug-admin', 'captain')
     async def map(self, ctx, map):
         context = self.chaninfo[ctx.channel.id]
-        self.logger.info(f"{ctx.message.author} triggered map()")
+        self.logger.info(f"{ctx.channel.name}: {ctx.message.author} triggered map()")
 
         if ctx.message.guild.id != self.game_guild:
             return
@@ -345,7 +347,7 @@ class PUG(commands.Cog, name="Pick-up Game"):
     @commands.command(help="- Lists the maps in the map pool")
     @commands.has_any_role('player')
     async def maps(self, ctx):
-        self.logger.info(f"{ctx.message.author} triggered maps()")
+        self.logger.info(f"{ctx.channel.name}: {ctx.message.author} triggered maps()")
 
         if ctx.message.guild.id != self.game_guild:
             return

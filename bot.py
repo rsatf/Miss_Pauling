@@ -26,6 +26,7 @@ async def on_ready():
 
 @client.command(help="- Just checks the bot is still alive")
 async def ping(ctx):
+    logger.info(f"{ctx.channel.name}: {ctx.message.author} triggered ping()")
     await ctx.send(f'Pong! {round(client.latency * 1000)}ms')
 
 # @ping.error
