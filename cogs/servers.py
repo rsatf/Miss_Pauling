@@ -54,6 +54,7 @@ class Servers(commands.Cog, name="Servers"):
 
     @commands.command(help="- Lists rsa.tf servers that have players on them")
     async def servers(self, ctx):
+        self.logger.info(f"{ctx.channel.name}: {ctx.message.author} triggered servers()")
         
         serv_addr_list = eval(os.getenv('PUG_SERVERS'))
         embed = discord.Embed(
