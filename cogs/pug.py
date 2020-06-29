@@ -63,7 +63,6 @@ class Timer():
             game_players = [x for x in context['added_players'].values()]
 
             # Stop the game so people can't !rem now that the timer has concluded
-            # context['game'].stop()
             await self.game.game_stop(context)
 
             await context['ctx'].send('Game commencing! PM\'ing connection details to all players')
@@ -84,7 +83,6 @@ class Timer():
         context = self.game.chaninfo[self.chan]
         await asyncio.sleep(300)
         self.logger.info(f'Adding {self.game_server} back to to server pool')
-        # self.game.used_servers.remove(context["game_server"])
         self.game.servers.append(self.game_server)
         self.self.game_server = None
 
@@ -122,12 +120,9 @@ class PUG(commands.Cog, name="Pick-up Game"):
         for channel in self.channels:
             self.chaninfo[channel] = {}
             self.chaninfo[channel]['ctx'] = None
-            # self.chaninfo[channel]['game_full'] = False
             self.chaninfo[channel]['game_message'] = None
             self.chaninfo[channel]['game_server'] = None
-            # self.chaninfo[channel]['game_password'] = None
             self.chaninfo[channel]['game_map'] = None
-            # self.chaninfo[channel]['player_count'] = 0
             self.chaninfo[channel]['added_players'] = {}
             game = Game(2, 6)
             self.chaninfo[channel]['game'] = game
@@ -260,7 +255,6 @@ class PUG(commands.Cog, name="Pick-up Game"):
             return
         
         await self.game_update_pin(ctx.channel.id)
-        # context['player_count'] += 1
         await self.status(ctx)
         await self.game_start(ctx, context)
         return
@@ -291,10 +285,6 @@ class PUG(commands.Cog, name="Pick-up Game"):
                 await ctx.send(f'{e}')
                 return
 
-        # if context['game_full']:
-        #     context['game_full'] = False
-
-        # context['player_count'] -= 1
         await self.game_update_pin(ctx.channel.id)
         await self.status(ctx)
         return
@@ -322,7 +312,6 @@ class PUG(commands.Cog, name="Pick-up Game"):
             try:
                 context['game'].remove(context['added_players'][member.id])
                 del context['added_players'][member.id]
-                # context['player_count'] -= 1
                 await self.game_update_pin(ctx.channel.id)
                 await self.status(ctx)
             except (GameNotOnError, PlayerNotAddedError) as e:
@@ -363,10 +352,7 @@ class PUG(commands.Cog, name="Pick-up Game"):
         return
 
     async def game_start(self, ctx, context):
-        # if context['player_count'] == context['game'].max_players:
         if context['game'].player_count == context['game'].max_players and context['game'].game_full:
-        # if context['game'].player_count == context['game'].max_players:
-            # context['game_full'] = True
             await ctx.send('Game is full. Waiting 60 seconds before game starts.')
             context['ctx'] = ctx
             await context['timer'].start_countdown()
