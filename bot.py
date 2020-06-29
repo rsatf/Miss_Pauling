@@ -3,6 +3,7 @@ from discord.ext import commands, tasks
 import os
 from dotenv import load_dotenv
 import logging
+import traceback
 
 log_format = logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s')
 logger = logging.getLogger('discord')
@@ -42,5 +43,7 @@ if __name__ == "__main__":
         except Exception as e:
             exc = '{}: {}'.format(type(e).__name__, e)
             logger.warning(f"Failed to load file {filename} as extension\n{exc}")
+            logger.warning(traceback.format_exc())
+            logger.warning(f'{e}')
 
     client.run(TOKEN)

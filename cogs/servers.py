@@ -3,6 +3,7 @@ import discord
 from discord.ext import commands
 import valve.source.a2s
 import logging
+import traceback
 import os
 from dotenv import load_dotenv
 
@@ -40,7 +41,8 @@ class Servers(commands.Cog, name="Servers"):
                 d['players'] = players
             return d
         except valve.source.NoResponseError as e:
-            raise e
+            self.logger.warning(traceback.format_exc())
+            self.logger.warning(f'{e}')
 
         
     # @bot.group()

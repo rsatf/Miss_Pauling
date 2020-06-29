@@ -5,6 +5,7 @@ import os
 import random
 import sys
 import discord
+import traceback
 import asyncio
 import valve.rcon
 import valve.source.a2s
@@ -159,6 +160,8 @@ class PUG(commands.Cog, name="Pick-up Game"):
                 context['game'].start(teams, mode)
             except GameOnError as e:
                 await ctx.send(f'{e}')
+                self.logger.warning(traceback.format_exc())
+                self.logger.warning(f'{e}')
                 return
 
             await ctx.send(f'Game started! This game will be played on {context["game_server"][0]}:{context["game_server"][1]}')
@@ -188,6 +191,8 @@ class PUG(commands.Cog, name="Pick-up Game"):
                 context['game'].stop()
             except (GameOnError, GameNotOnError) as e:
                 await ctx.send(f'{e}')
+                self.logger.warning(traceback.format_exc())
+                self.logger.warning(f'{e}')
                 return
             await context['game_message'].unpin()
             await ctx.send("Game stopped.")
@@ -252,6 +257,8 @@ class PUG(commands.Cog, name="Pick-up Game"):
         except (PlayerAddedError, GameFullError, TeamFullError) as e:
             del context['added_players'][ctx.message.author.id]
             await ctx.send(f'{e}')
+            self.logger.warning(traceback.format_exc())
+            self.logger.warning(f'{e}')
             return
         
         await self.game_update_pin(ctx.channel.id)
@@ -284,6 +291,8 @@ class PUG(commands.Cog, name="Pick-up Game"):
                 del context['added_players'][ctx.message.author.id]
             except (GameNotOnError, PlayerNotAddedError) as e:
                 await ctx.send(f'{e}')
+                self.logger.warning(traceback.format_exc())
+                self.logger.warning(f'{e}')
                 return
 
         if context['game_full']:
@@ -321,6 +330,8 @@ class PUG(commands.Cog, name="Pick-up Game"):
                 await self.status(ctx)
             except (GameNotOnError, PlayerNotAddedError) as e:
                 await ctx.send(f'{e}')
+                self.logger.warning(traceback.format_exc())
+                self.logger.warning(f'{e}')
                 return
 
     @commands.command(help="- Changes the map of the active game")
@@ -366,6 +377,7 @@ class PUG(commands.Cog, name="Pick-up Game"):
     async def find_server(self):
         self.logger.info("Looking for an open server")
         for address in self.servers:
+            server_name
             try:
                 with valve.source.a2s.ServerQuerier(address) as server:
                     server_name = server.info()["server_name"]
@@ -374,7 +386,9 @@ class PUG(commands.Cog, name="Pick-up Game"):
                     if player_count < 1:
                         return (server.host, server.port)
             except valve.source.NoResponseError:
-                self.logger.warning(f"Could not query server {address} to see if it is open")
+                self.logger.warning(f"Could not query server {server_name} to see if it is open")
+                self.logger.warning(traceback.format_exc())
+                self.logger.warning(f'{e}')
                 pass
 
     async def change_password(self, address, password):
@@ -391,19 +405,22 @@ class PUG(commands.Cog, name="Pick-up Game"):
         if self.used_servers:
             for address in self.used_servers:
                 self.logger.info(f"Trying to reset password for server {address}")
+                server_name
                 try:
                     with valve.source.a2s.ServerQuerier(address) as server:
-                        player_count = server.info()["player_count"]
                         server_name = server.info()["server_name"]
+                        player_count = server.info()["player_count"]
                         if player_count < 1:
                             self.logger.info(f"Changing sv_password of server {server_name}")
                             valve.rcon.execute(address, self.rcon_password, "sv_password wedontreallycare")
                             self.used_servers.remove(address)
                             self.servers.append(address)
                         else:
-                            self.logger.info(f"Server {server} still in use, not changing password")
+                            self.logger.info(f"Server {server_name} still in use, not changing password")
                 except valve.source.NoResponseError:
-                    self.logger.warn(f"Could not connect to {address}")
+                    self.logger.warn(f"Could not connect to server {server_name}")
+                    self.logger.warning(traceback.format_exc())
+                    self.logger.warning(f'{e}')
                     pass
 
     def cog_unload(self):

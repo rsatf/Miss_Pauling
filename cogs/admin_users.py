@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 import logging
+import traceback
 
 class Admin_Users(commands.Cog, name="Users"):
 
@@ -29,17 +30,27 @@ class Admin_Users(commands.Cog, name="Users"):
     @commands.has_any_role('admin')
     # async def kick(self, ctx, member : Discord.Member, *, reason=None):
     async def kick(self, ctx, member, *, reason=None):
-        await member.kick(reason=reason)
-        await ctx.send(f'Kicked user {member.mention}')
-        self.logger.info(f'Kicked user {member.mention}')
+        try:
+            await member.kick(reason=reason)
+            await ctx.send(f'Kicked user {member.mention}')
+            self.logger.info(f'Kicked user {member.mention}')
+        except Exception as e:
+            await ctx.send(f'Failed to kick user {member.mention}')
+            self.logger.warning(traceback.format_exc())
+            self.logger.warning(f'{e}')
 
     @commands.command(hidden=True)
     @commands.has_any_role('admin')
     # async def ban(self, ctx, member : Discord.Member, *, reason=None):
     async def ban(self, ctx, member, *, reason=None):
-        await member.ban(reason=reason)
-        await ctx.send(f'Banned user {member.mention}')
-        self.logger.info(f'Banned user {member.mention}')
+        try:
+            await member.ban(reason=reason)
+            await ctx.send(f'Banned user {member.mention}')
+            self.logger.info(f'Banned user {member.mention}')
+        except Exception as e:
+            await ctx.send(f'Failed to kick ban {member.mention}')
+            self.logger.warning(traceback.format_exc())
+            self.logger.warning(f'{e}')
 
     @commands.command(hidden=True)
     @commands.has_any_role('admin')
@@ -49,10 +60,14 @@ class Admin_Users(commands.Cog, name="Users"):
         for ban_entry in banned_users:
             user = ban_entry.user
             if (user.name, user.descriminator) == (member_name, member_discriminator):
-                await ctx.guild.unban(user)
-                await ctx.send(f'Unbanned user {member.mention}')
-                self.logger.info(f'Unbanned user {member.mention}')
-                return
+                try:
+                    await ctx.guild.unban(user)
+                    await ctx.send(f'Unbanned user {member.mention}')
+                    self.logger.info(f'Unbanned user {member.mention}')
+                except Exception as e:
+                    await ctx.send(f'Failed to unban user {member.mention}')
+                    self.logger.warning(traceback.format_exc())
+                    self.logger.warning(f'{e}')
 
     ## # # # # # # # # # # # #
     # Cleanup when unloading #
