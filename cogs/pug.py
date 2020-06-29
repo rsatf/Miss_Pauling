@@ -21,7 +21,7 @@ class Timer():
 
     log_format = logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s')
     logger = logging.getLogger('timer')
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
     file_handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
     file_handler.setFormatter(log_format)
     logger.addHandler(file_handler)
@@ -79,7 +79,7 @@ class PUG(commands.Cog, name="Pick-up Game"):
 
     log_format = logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s')
     logger = logging.getLogger('pug')
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
     file_handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
     file_handler.setFormatter(log_format)
     logger.addHandler(file_handler)
