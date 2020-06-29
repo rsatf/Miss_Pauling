@@ -10,8 +10,9 @@ class Game():
         self.team_size = None
         self.teams = None
         self.max_players = None
-        self.players_added = None
+        self.player_count = None
         self.game_on = False
+        self.game_full = False
 
     def start(self, teams: int = 2, mode="6v6") -> None:
         if self.game_on is True:
@@ -34,7 +35,7 @@ class Game():
                 self.team_size = 6
         self.teams = [[self.empty_slot for x in range(self.team_size)] for i in range(self.teams_count)]
         self.max_players = self.team_size * self.teams_count
-        self.players_added = 0
+        self.player_count = 0
         self.game_on = True
         return
 
@@ -46,8 +47,9 @@ class Game():
         self.team_size = None
         self.teams = None
         self.max_players = None
-        self.players_added = None
+        self.player_count = None
         self.game_on = False
+        self.game_full = False
         return
 
     def restart(self, teams: int = 2, mode="6v6"):
@@ -74,8 +76,7 @@ class Game():
             all_teams += ") "
         return all_teams
 
-    # def add(self, player: Player, team: int = None) -> None:
-    def add(self, player, team: int = None) -> None:
+    def add(self, player: Player, team: int = None) -> None:
         if self.game_on is False:
             raise GameNotOnError("No game on.")
 
@@ -103,7 +104,10 @@ class Game():
             if slot == self.empty_slot:
                 selected_team[index] = player
                 break
-        self.players_added += 1
+        self.player_count += 1
+
+        if self.player_count == self.max_players:
+            self.game_full = True
         return
 
     def remove(self, player: Player) -> None:
@@ -116,6 +120,10 @@ class Game():
         for index, _ in enumerate(self.teams):
             if player in self.teams[index]:
                 self.teams[index] = [self.empty_slot if x == player else x for x in self.teams[index]]
+        self.player_count -= 1
+
+        if self.game_full:
+            self.game_full = False
         return
 
     def transform(self, teams: int = 2, mode="6v6") -> None:
