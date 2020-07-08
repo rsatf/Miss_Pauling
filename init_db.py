@@ -1,5 +1,3 @@
-from tortoise import Tortoise, run_async
-
 from tortoise import Tortoise, fields, run_async
 from tortoise.exceptions import OperationalError
 from tortoise.models import Model
