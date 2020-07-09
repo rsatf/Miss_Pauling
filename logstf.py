@@ -17,14 +17,15 @@ class Uploads():
     def __init__(self, uploader_id: int) -> None:
         self.uploader_id = uploader_id
 
-    async def get_uploads(self) -> list:
+    async def get_uploads(self, limit: int=1000) -> list:
         async with aiohttp.ClientSession() as session:
-            async with session.get('http://logs.tf/api/v1/log?uploader=' + str(self.uploader_id)) as resp:
+            async with session.get('http://logs.tf/api/v1/log?limit=' + str(limit) + '&uploader=' + str(self.uploader_id)) as resp:
                 d = json.loads(await resp.text())
                 logs = []
                 for log in d['logs']:
                     logs.append(log['id'])
-                return logs
+                # reverse the order so the oldest game is first in the list
+                return list(reversed(logs))
 
 if __name__ == '__main__':
     data = asyncio.run(Uploads(76561198003234706).get_uploads())

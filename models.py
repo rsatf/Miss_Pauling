@@ -7,15 +7,16 @@ from tortoise import fields
 # participants: fields.ManyToManyRelation["Team"] = fields.ManyToManyField('models.Team', related_name='events', through='event_team')
 
 class Players(Model):
-    steam_id = fields.CharField(pk=True, generated=False, max_length=15)
-    nick = fields.TextField()
+    # participants = fields.ManyToManyField('models.Team', related_name='events', through='event_team')
+    # games_played = fields.ManyToManyField('models.PlayerStats', related_name='players')
+    steam_id = fields.CharField(pk=True, generated=False, max_length=20)
 
     class Meta:
         table = "players"
         table_description = "Stores information on all Players"
 
-    def __str__(self):
-        return self.nick
+    # def __str__(self):
+    #     return self.nick
 
 class LogstfData(Model):
     game_id = fields.IntField(pk=True, generated=False)
@@ -26,15 +27,16 @@ class LogstfData(Model):
     game_data = fields.JSONField()
 
     class Meta:
-        table = "games"
-        table_description = "Stores information on all games played"
+        table = "logstf"
+        table_description = "Stores raw logstf data for all matches"
+        unique_together=('game_id', 'uploader_id')
 
 class MatchData(Model):
     match_id = fields.IntField(pk=True, generated=True)
-    logstf_id = fields.IntField(unique=True)
-    nick = fields.CharField(max_length=255, null=False)
+    logstf = fields.ForeignKeyField('models.LogstfData', related_name='match_data')
     match_date = fields.DatetimeField()
     winning_team = fields.CharField(max_length=4)
+    # Should we reference Players table for each player in the game? Can that be done?
     players = fields.CharField(max_length=255)
     length = fields.IntField()
     red_score = fields.IntField()
@@ -57,28 +59,31 @@ class MatchData(Model):
     class Meta:
         table = "matches"
         table_description = "Stores data on all matches played"
+        unique_together=('logstf', )
 
 class PlayerStats(Model):
-    playerstats_id = fields.IntField(pk=True, generated=True)
-    match_id = fields.IntField()
-    logstf_id = fields.IntField()
-    player_id = fields.CharField(max_length=15)
+    stats_id = fields.IntField(pk=True, generated=True)
+    match = fields.ForeignKeyField('models.MatchData', related_name='player_stats')
+    logstf = fields.ForeignKeyField('models.LogstfData', related_name='player_stats')
+    player = fields.ForeignKeyField('models.Players', related_name='player_stats')
     team = fields.CharField(max_length=4)
-    demoman = fields.BooleanField(default=False)
-    engineer = fields.BooleanField(default=False)
-    heavyweaponsguy = fields.BooleanField(default=False)
-    medic = fields.BooleanField(default=False)
-    pyro = fields.BooleanField(default=False)
-    scout = fields.BooleanField(default=False)
-    sniper = fields.BooleanField(default=False)
-    soldier = fields.BooleanField(default=False)
-    spy = fields.BooleanField(default=False)
+    # I need to add win here as boolean
+    # These need to be broken out into separate tables?
+    # demoman = fields.BooleanField(default=False)
+    # engineer = fields.BooleanField(default=False)
+    # heavyweaponsguy = fields.BooleanField(default=False)
+    # medic = fields.BooleanField(default=False)
+    # pyro = fields.BooleanField(default=False)
+    # scout = fields.BooleanField(default=False)
+    # sniper = fields.BooleanField(default=False)
+    # soldier = fields.BooleanField(default=False)
+    # spy = fields.BooleanField(default=False)
     kills = fields.IntField()
     deaths = fields.IntField()
     assists = fields.IntField()
     suicides = fields.IntField()
-    kapd = fields.IntField()
-    kpd = fields.IntField()
+    kapd = fields.FloatField()
+    kpd = fields.FloatField()
     damage = fields.IntField()
     damage_real = fields.IntField()
     dt = fields.IntField()
@@ -91,7 +96,7 @@ class PlayerStats(Model):
     ubers = fields.IntField()
     drops = fields.IntField()
     medkits = fields.IntField()
-    medits_hp = fields.IntField()
+    medkits_hp = fields.IntField()
     backstabs = fields.IntField()
     headshots = fields.IntField()
     headshots_hit = fields.IntField()
@@ -101,5 +106,6 @@ class PlayerStats(Model):
     ic = fields.IntField()
 
     class Meta:
-        table = "player_stats"
+        table = "stats"
         table_description = "Contains a players stats for each match"
+        unique_together=('logstf', 'player')
