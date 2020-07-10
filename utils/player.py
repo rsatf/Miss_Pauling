@@ -9,7 +9,5 @@ class Player():
         self.name = player.name
         self.mention = player.mention
         self.display_name = player.display_name
-        # self.descriminator = player.descriminator
-        # self.dm_channel = player.dm_channel
         self.rating = rating
         self.steamid = None

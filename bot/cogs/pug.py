@@ -12,10 +12,10 @@ import valve.source.a2s
 from discord.ext import commands, tasks
 from dotenv import load_dotenv
 
-from cogs.bin.pickup import (Game, GameFullError, GameNotOnError, GameOnError,
+from utils.pickup import (Game, GameFullError, GameNotOnError, GameOnError,
                              PlayerAddedError, PlayerNotAddedError,
                              TeamFullError)
-from cogs.bin.player import Player
+from utils.player import Player
 
 class Timer():
 
@@ -163,7 +163,7 @@ class PUG(commands.Cog, name="Pick-up Game"):
                 return
 
             await ctx.send(f'Game started! This game will be played on {context["game_server"][0]}:{context["game_server"][1]}')
-            context['game_message'] = await ctx.send(f'```({context["game_map"]}) {context["game"].status()}```')
+            context['game_message'] = await ctx.send(f'```({context["game_map"]}) {context["game"].pretty_status()}```')
             await context['game_message'].pin()
             await self.change_password(address=context['game_server'], password="temppassword")
         return
@@ -216,7 +216,7 @@ class PUG(commands.Cog, name="Pick-up Game"):
             return
 
         if context['game'].game_on:
-            status = f'```({context["game_map"]}) {context["game"].status()}```'
+            status = f'```({context["game_map"]}) {context["game"].pretty_status()}```'
             await ctx.send(status)
         return
 
@@ -385,7 +385,7 @@ class PUG(commands.Cog, name="Pick-up Game"):
 
     async def game_update_pin(self, chan):
         context = self.chaninfo[chan]
-        await context['game_message'].edit(content=(f'```({context["game_map"]}) {context["game"].status()}```'))
+        await context['game_message'].edit(content=(f'```({context["game_map"]}) {context["game"].pretty_status()}```'))
 
     @tasks.loop(seconds=600)
     async def reset_password(self):
