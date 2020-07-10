@@ -4,8 +4,8 @@ from tortoise import Tortoise, run_async
 from tortoise.exceptions import IntegrityError
 import models
 import datetime
-from logstf import Match, Uploads
-from utils import SteamID
+from utils.logstf import Match, Uploads
+from utils.steam import SteamID
 
 class DataHandler():
 

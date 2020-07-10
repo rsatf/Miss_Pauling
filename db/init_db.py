@@ -3,11 +3,9 @@ from tortoise.exceptions import OperationalError
 from tortoise.models import Model
 import models
 
-
-
 async def init():
     await Tortoise.init(
-        db_url='sqlite://pauling.db',
+        db_url='sqlite://../pauling.db',
         modules={'models': ['models']}
     )
     await Tortoise.generate_schemas()
