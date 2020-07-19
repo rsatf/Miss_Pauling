@@ -12,22 +12,24 @@ import valve.source.a2s
 from discord.ext import commands, tasks
 from dotenv import load_dotenv
 
-from utils.pickup import (Game, GameFullError, GameNotOnError, GameOnError,
+from pauling.utils.pickup import (Game, GameFullError, GameNotOnError, GameOnError,
                              PlayerAddedError, PlayerNotAddedError,
                              TeamFullError)
-from utils.player import Player
+from pauling.utils.player import Player
 
 class Timer():
 
-    log_format = logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s')
-    logger = logging.getLogger('timer')
-    logger.setLevel(logging.DEBUG)
-    file_handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
-    file_handler.setFormatter(log_format)
-    logger.addHandler(file_handler)
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(log_format)
-    logger.addHandler(console_handler)
+    # log_format = logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s')
+    # logger = logging.getLogger('timer')
+    # logger.setLevel(logging.DEBUG)
+    # file_handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
+    # file_handler.setFormatter(log_format)
+    # logger.addHandler(file_handler)
+    # console_handler = logging.StreamHandler()
+    # console_handler.setFormatter(log_format)
+    # logger.addHandler(console_handler)
+
+    logger = logging.getLogger(__name__)
 
     def __init__(self, game, chan):
         self.game = game
@@ -77,15 +79,7 @@ class Timer():
 
 class PUG(commands.Cog, name="Pick-up Game"):
 
-    log_format = logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s')
-    logger = logging.getLogger('pug')
-    logger.setLevel(logging.INFO)
-    file_handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
-    file_handler.setFormatter(log_format)
-    logger.addHandler(file_handler)
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(log_format)
-    logger.addHandler(console_handler)
+    logger = logging.getLogger(__name__)
 
     def __init__(self, client):
         load_dotenv()
@@ -120,11 +114,6 @@ class PUG(commands.Cog, name="Pick-up Game"):
             self.chaninfo[channel]['game'] = game
             timer = Timer(self, channel)
             self.chaninfo[channel]['timer'] = timer
-
-    # @commands.Cog.listener()
-    # async def on_reaction_add(self, reaction, user):
-    #     channel = reaction.message.channel
-    #     await channel.send(f'{user.name} added {reaction.emoji} to "{reaction.message.content}"')
 
     @commands.command(help="- Starts a pick-up game")
     @commands.has_any_role('admin', 'pug-admin', 'captain')

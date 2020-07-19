@@ -4,15 +4,7 @@ import logging
 
 class Admin_Users(commands.Cog, name="Users"):
 
-    log_format = logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s')
-    logger = logging.getLogger('admin_users')
-    logger.setLevel(logging.INFO)
-    file_handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
-    file_handler.setFormatter(log_format)
-    logger.addHandler(file_handler)
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(log_format)
-    logger.addHandler(console_handler)
+    logger = logging.getLogger(__name__)
 
     def __init__(self, client):
         self.client = client

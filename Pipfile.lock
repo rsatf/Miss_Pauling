@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "3ec4a222e4d6e0752ae5b3ada33530062ca8ba841b11b037f230e36f80cc99d1"
+            "sha256": "e150f94ffcb8819a64c52470bf108df0cc2439a589ba7fbdb9deaf9e7f49c047"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -36,11 +36,11 @@
         },
         "aiosqlite": {
             "hashes": [
-                "sha256:50688c40632ae249f986ab3ae2c66a45c0535b84a5d4aae0e0be572b5fed6909",
-                "sha256:6e92961ae9e606b43b05e29b129e346b29e400fcbd63e3c0c564d89230257645"
+                "sha256:063e33c4f03f98c91c1012d760a37cb26eb3763b264505ae5a23e991a6d17237",
+                "sha256:c08580eea5e1e256e09e83b8504da5bf96df33fa5e469f4d442ee45763935f72"
             ],
             "markers": "python_version >= '3.6'",
-            "version": "==0.13.0"
+            "version": "==0.14.0"
         },
         "async-timeout": {
             "hashes": [
@@ -101,6 +101,11 @@
                 "sha256:bbbae5fb4a7abfe71d4688fd64bff70b91bbd74ef6a99d964bab18f7fdf286dd"
             ],
             "version": "==0.1.12"
+        },
+        "master": {
+            "editable": true,
+            "git": "https://github.com/theskumar/python-dotenv",
+            "ref": "e4bbb8a2aa881409af6fb92933c18e2af6609da8"
         },
         "monotonic": {
             "hashes": [
