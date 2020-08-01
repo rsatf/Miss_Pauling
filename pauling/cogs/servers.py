@@ -85,23 +85,6 @@ class Servers(commands.Cog, name="Servers"):
             d['players'] = all_players
             return d
 
-    # async def comp_query(self, serv_addr):
-    #     d = {}
-    #     try:
-    #         with valve.source.a2s.ServerQuerier(serv_addr) as server:
-    #             d['name'] = server.info()["server_name"]
-    #             d['map'] = server.info()["map"]
-    #             d['player_count'] = server.info()["player_count"]
-    #             d['max_players'] = server.info()["max_players"]
-
-    #             players = []
-    #             for player in server.players()['players']:
-    #                 players.append(player['name'])
-    #             d['players'] = players
-    #         return d
-    #     except valve.source.NoResponseError as e:
-    #         raise e
-
     async def pub_query(self, url) -> list:
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as resp:
