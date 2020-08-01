@@ -30,7 +30,10 @@ class Timer():
         self.chan = chan
         self.loop = asyncio.get_event_loop()
         self.game_server = None
+<<<<<<< HEAD:pauling/cogs/pug.py
         self.game_password = None
+=======
+>>>>>>> master:cogs/pug.py
 
     def __del__(self):
         self.logger.info("Reference to object Timer being deleted!")
@@ -53,7 +56,11 @@ class Timer():
 
         if context['game'].game_full:
             self.logger.info(f'Game commencing')
+<<<<<<< HEAD:pauling/cogs/pug.py
 
+=======
+            
+>>>>>>> master:cogs/pug.py
             # We want to run Pug's game_stop() method which will clear some variables so make copies of them first
             self.game_server = context['game_server']
             self.game_password = random.choice(self.game.passwords)
@@ -61,10 +68,17 @@ class Timer():
 
             # Stop the game so people can't !rem now that the timer has concluded
             await self.game.game_stop(context)
+<<<<<<< HEAD:pauling/cogs/pug.py
             
             await context['ctx'].send('Game commencing! PM\'ing connection details to all players')
             self.game.reset_password.restart()
             
+=======
+
+            await context['ctx'].send('Game commencing! PM\'ing connection details to all players')
+            self.game.reset_password.restart()
+
+>>>>>>> master:cogs/pug.py
             valve.rcon.execute(self.game_server, self.game.rcon_password, f"changelevel {context['game_map']}")
             await self.game.change_password(address=self.game_server, password=f'{self.game_password}')
 
@@ -73,15 +87,24 @@ class Timer():
                 await player.player.send(connect_string)
 
             self.game.used_servers.append(self.game_server)
+<<<<<<< HEAD:pauling/cogs/pug.py
 
+=======
+            
+>>>>>>> master:cogs/pug.py
             await self.loop.create_task(self.server_readd())
 
     async def server_readd(self):
         context = self.game.chaninfo[self.chan]
         await asyncio.sleep(300)
         self.logger.info(f'Adding {self.game_server} back to to server pool')
+<<<<<<< HEAD:pauling/cogs/pug.py
         self.game.used_servers.remove(self.game_server)
         self.game.servers.append(self.game_server)
+=======
+        self.game.servers.append(self.game_server)
+        self.self.game_server = None
+>>>>>>> master:cogs/pug.py
 
 class PUG(commands.Cog, name="Pick-up Game"):
 
@@ -176,11 +199,19 @@ class PUG(commands.Cog, name="Pick-up Game"):
 
         try:
             await self.game_stop(context)
+<<<<<<< HEAD:pauling/cogs/pug.py
         except (GameOnError, GameNotOnError) as e:
             await ctx.send(f'{e}')
             return
 
         self.servers.append(server)
+=======
+        except GameOnError as e:
+            await ctx.send(f'{e}')
+            return
+            
+        self.servers.append(context['game_server'])
+>>>>>>> master:cogs/pug.py
         await ctx.send("Game stopped.")
         await context['game_message'].edit(content=f'```Game cancelled.```')
         return
@@ -353,6 +384,10 @@ class PUG(commands.Cog, name="Pick-up Game"):
         except (GameOnError, GameNotOnError) as e:
             raise e
             return
+<<<<<<< HEAD:pauling/cogs/pug.py
+=======
+
+>>>>>>> master:cogs/pug.py
         context['game_server'] = None
         context['added_players'] = {}
         await context['game_message'].unpin()
