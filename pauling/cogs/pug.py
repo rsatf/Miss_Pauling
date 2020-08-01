@@ -11,29 +11,26 @@ import valve.rcon
 import valve.source.a2s
 from discord.ext import commands, tasks
 from dotenv import load_dotenv
+from tortoise import Tortoise, run_async
+from tortoise.exceptions import IntegrityError
 
-from cogs.bin.pickup import (Game, GameFullError, GameNotOnError, GameOnError,
+from pauling.utils.pickup import (Game, GameFullError, GameNotOnError, GameOnError,
                              PlayerAddedError, PlayerNotAddedError,
                              TeamFullError)
-from cogs.bin.player import Player
+from pauling.utils.player import Player
+
+from pauling.db.models import Servers, PugHistory
 
 class Timer():
 
-    log_format = logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s')
-    logger = logging.getLogger('timer')
-    logger.setLevel(logging.DEBUG)
-    file_handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
-    file_handler.setFormatter(log_format)
-    logger.addHandler(file_handler)
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(log_format)
-    logger.addHandler(console_handler)
+    logger = logging.getLogger(__name__)
 
     def __init__(self, game, chan):
         self.game = game
         self.chan = chan
         self.loop = asyncio.get_event_loop()
         self.game_server = None
+        self.game_password = None
 
     def __del__(self):
         self.logger.info("Reference to object Timer being deleted!")
@@ -56,7 +53,6 @@ class Timer():
 
         if context['game'].game_full:
             self.logger.info(f'Game commencing')
-            
             # We want to run Pug's game_stop() method which will clear some variables so make copies of them first
             self.game_server = context['game_server']
             self.game_password = random.choice(self.game.passwords)
@@ -76,7 +72,6 @@ class Timer():
                 await player.player.send(connect_string)
 
             self.game.used_servers.append(self.game_server)
-            
             await self.loop.create_task(self.server_readd())
 
     async def server_readd(self):
@@ -88,15 +83,7 @@ class Timer():
 
 class PUG(commands.Cog, name="Pick-up Game"):
 
-    log_format = logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s')
-    logger = logging.getLogger('pug')
-    logger.setLevel(logging.INFO)
-    file_handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
-    file_handler.setFormatter(log_format)
-    logger.addHandler(file_handler)
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(log_format)
-    logger.addHandler(console_handler)
+    logger = logging.getLogger(__name__)
 
     def __init__(self, client):
         load_dotenv()
@@ -128,11 +115,6 @@ class PUG(commands.Cog, name="Pick-up Game"):
             self.chaninfo[channel]['game'] = game
             timer = Timer(self, channel)
             self.chaninfo[channel]['timer'] = timer
-
-    # @commands.Cog.listener()
-    # async def on_reaction_add(self, reaction, user):
-    #     channel = reaction.message.channel
-    #     await channel.send(f'{user.name} added {reaction.emoji} to "{reaction.message.content}"')
 
     @commands.command(help="- Starts a pick-up game")
     @commands.has_any_role('admin', 'pug-admin', 'captain')
@@ -171,7 +153,7 @@ class PUG(commands.Cog, name="Pick-up Game"):
                 return
 
             await ctx.send(f'Game started! This game will be played on {context["game_server"][0]}:{context["game_server"][1]}')
-            context['game_message'] = await ctx.send(f'```({context["game_map"]}) {context["game"].status()}```')
+            context['game_message'] = await ctx.send(f'```({context["game_map"]}) {context["game"].pretty_status()}```')
             await context['game_message'].pin()
             await self.change_password(address=context['game_server'], password="temppassword")
         return
@@ -187,14 +169,16 @@ class PUG(commands.Cog, name="Pick-up Game"):
             
         if ctx.message.channel.id not in self.chaninfo.keys():
             return
+        
+        server = context['game_server']
 
         try:
             await self.game_stop(context)
-        except GameOnError as e:
+        except (GameOnError, GameNotOnError) as e:
             await ctx.send(f'{e}')
             return
-            
-        self.servers.append(context['game_server'])
+
+        self.servers.append(server)
         await ctx.send("Game stopped.")
         await context['game_message'].edit(content=f'```Game cancelled.```')
         return
@@ -215,7 +199,7 @@ class PUG(commands.Cog, name="Pick-up Game"):
             return
 
         if context['game'].game_on:
-            status = f'```({context["game_map"]}) {context["game"].status()}```'
+            status = f'```({context["game_map"]}) {context["game"].pretty_status()}```'
             await ctx.send(status)
         return
 
@@ -244,7 +228,7 @@ class PUG(commands.Cog, name="Pick-up Game"):
                 await ctx.send(f'Already added elsewhere.')
                 return
 
-        player = Player(ctx.message.author, 0)
+        player = Player(ctx.message.author, 0, None)
 
         try:
             context['added_players'][ctx.message.author.id] = player
@@ -329,9 +313,13 @@ class PUG(commands.Cog, name="Pick-up Game"):
             
         if ctx.message.channel.id not in self.chaninfo.keys():
             return
-
-        if map in self.map_pool:
-            context['game_map'] = map
+        mapname = ""
+        if True in [map in x for x in self.map_pool]:
+            for x in self.map_pool:
+                if map in x:
+                    mapname = x
+                    print(f"Changing map to {mapname}")
+            context['game_map'] = mapname
             await ctx.send(f"Map changed to {context['game_map']}")
             await self.status(ctx)
         else:
@@ -363,7 +351,6 @@ class PUG(commands.Cog, name="Pick-up Game"):
         except (GameOnError, GameNotOnError) as e:
             raise e
             return
-
         context['game_server'] = None
         context['added_players'] = {}
         await context['game_message'].unpin()
@@ -388,7 +375,7 @@ class PUG(commands.Cog, name="Pick-up Game"):
 
     async def game_update_pin(self, chan):
         context = self.chaninfo[chan]
-        await context['game_message'].edit(content=(f'```({context["game_map"]}) {context["game"].status()}```'))
+        await context['game_message'].edit(content=(f'```({context["game_map"]}) {context["game"].pretty_status()}```'))
 
     @tasks.loop(seconds=600)
     async def reset_password(self):

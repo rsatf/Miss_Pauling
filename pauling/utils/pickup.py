@@ -1,5 +1,9 @@
 import random
-from cogs.bin.player import Player
+try:
+    from .player import Player
+except:
+    from player import Player
+import json
 
 class Game():
 
@@ -61,19 +65,34 @@ class Game():
         if self.game_on is False:
             raise GameNotOnError("No game on.")
 
+        teams = {}
+        for i in range(0, len(self.teams)):
+            teams[i] = self.teams[i]
+        return teams
+
+    def pretty_status(self) -> str:
+        status = self.status()
+        teams = []
+
+        for key, value in status.items():
+            teams.append(value)
         team_count = 0
         all_teams = ""
-        for team in self.teams:
+
+        for team in teams:
             team_count += 1
             team_lineup = []
             team_empty = []
+
             for player in team:
                 if player != self.empty_slot:
-                    team_lineup.append(player.name)
+                    team_lineup.append(player.display_name)
                 else:
                     team_empty.append(player)
+
             all_teams += f"Team {team_count} [{len(team_lineup)}/{len(team)}] Players: ({'), ('.join(team_lineup + team_empty)}"
             all_teams += ") "
+
         return all_teams
 
     def add(self, player: Player, team: int = None) -> None:
@@ -245,3 +264,13 @@ class CannotTransformError(ValueError):
     def __init__(self, message):
 
         super().__init__(message)
+
+if __name__ == '__main__':
+    game = Game()
+    game.start()
+    russ = Player("russ", 0)
+    game.add(russ)
+    status = game.status()
+    print(status)
+    print(type(status[0][0]))
+    print(type(status[1][0]))
