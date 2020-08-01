@@ -1,14 +1,30 @@
 from tortoise.models import Model
 from tortoise import fields
 
-# tournament = fields.ForeignKeyField('models.Tournament', related_name='events')
-# tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField('models.Tournament', related_name='events')
-# participants = fields.ManyToManyField('models.Team', related_name='events', through='event_team')
-# participants: fields.ManyToManyRelation["Team"] = fields.ManyToManyField('models.Team', related_name='events', through='event_team')
+class Servers(Model):
+    server_id = fields.IntField(pk=True, generated=True)
+    ip = fields.CharField(max_length=15)
+    port = fields.IntField(max_length=5)
+
+    class Meta:
+        table = "servers"
+        table_description = "List of rsa.tf servers"
+        unique_together = ('ip', 'port')
+
+class PugHistory(Model):
+    game_id = fields.IntField(pk=True, generated=True)
+    date = fields.DatetimeField(auto_now_add=True)
+    channel_id = fields.CharField(max_length=18)
+    channel_name = fields.CharField(max_length=50)
+    players = fields.CharField(max_length=255)
+
+    class Meta:
+        table = "pug_history"
+        table_description = "History of all played pug games"
+        # Add a unqiue constraint to avoid shenanigans
+        unique_together = ('channel_id', 'players')
 
 class Players(Model):
-    # participants = fields.ManyToManyField('models.Team', related_name='events', through='event_team')
-    # games_played = fields.ManyToManyField('models.PlayerStats', related_name='players')
     steam_id = fields.CharField(pk=True, generated=False, max_length=20)
 
     class Meta:
@@ -29,14 +45,14 @@ class LogstfData(Model):
     class Meta:
         table = "logstf"
         table_description = "Stores raw logstf data for all matches"
-        unique_together=('game_id', 'uploader_id')
+        unique_together = ('game_id', 'uploader_id')
 
 class MatchData(Model):
     match_id = fields.IntField(pk=True, generated=True)
     logstf = fields.ForeignKeyField('models.LogstfData', related_name='match_data')
     match_date = fields.DatetimeField()
     winning_team = fields.CharField(max_length=4)
-    # Should we reference Players table for each player in the game? Can that be done?
+    # Should we reference Players table for each player in the game?
     players = fields.CharField(max_length=255)
     length = fields.IntField()
     red_score = fields.IntField()
@@ -59,7 +75,7 @@ class MatchData(Model):
     class Meta:
         table = "matches"
         table_description = "Stores data on all matches played"
-        unique_together=('logstf', )
+        unique_together = ('logstf', )
 
 class PlayerStats(Model):
     stats_id = fields.IntField(pk=True, generated=True)
@@ -108,4 +124,4 @@ class PlayerStats(Model):
     class Meta:
         table = "stats"
         table_description = "Contains a players stats for each match"
-        unique_together=('logstf', 'player')
+        unique_together = ('logstf', 'player')
