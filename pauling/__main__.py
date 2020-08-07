@@ -1,20 +1,19 @@
-import discord
+"""Discord.py bot creation and startup"""
+
 import os
-from dotenv import load_dotenv
 import logging
+import discord
+from dotenv import load_dotenv
+from pauling.bot import Bot
+
 
 logger = logging.getLogger(__name__)
 
 load_dotenv()
-TOKEN = os.getenv('DISCORD_TOKEN')
+TOKEN = os.getenv("DISCORD_TOKEN")
 
-from pauling.bot import Bot
 
-pauling = Bot(
-    command_prefix="!",
-    activity=discord.Game('!help'),
-    case_insensitive=True
-)
+pauling = Bot(command_prefix="!", activity=discord.Game("!help"), case_insensitive=True)
 
 pauling.load_extension("pauling.cogs.pug")
 pauling.load_extension("pauling.cogs.servers")

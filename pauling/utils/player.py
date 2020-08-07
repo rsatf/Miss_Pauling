@@ -1,18 +1,14 @@
+"""A Player that gets added to a pickup.py Game object"""
+
 import discord
-import json
-from json import JSONEncoder
 
-# class Player():
 
-#     def __init__(self, player, rating: int): 
-#         self.player = player
-#         self.rating = rating
+class Player:
+    """A Player object comprised of a discord.Member object as well as a skill rating and steamid"""
 
-class Player():
- 
     def __init__(self, player: discord.Member, rating: int, steamid):
         self.player = player
-        self.id = id
+        self.id = player.id
         self.mention = player.mention
         self.display_name = player.display_name
         self.rating = rating

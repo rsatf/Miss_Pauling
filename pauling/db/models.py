@@ -1,17 +1,29 @@
+"""Miss Pauling schema models"""
+
+# pylint: disable=R0903
+
 from tortoise.models import Model
 from tortoise import fields
 
+
 class Servers(Model):
+    """Table to hold servers used for pickup games"""
+
     server_id = fields.IntField(pk=True, generated=True)
     ip = fields.CharField(max_length=15)
     port = fields.IntField(max_length=5)
 
     class Meta:
+        """Servers metadata"""
+
         table = "servers"
         table_description = "List of rsa.tf servers"
-        unique_together = ('ip', 'port')
+        unique_together = ("ip", "port")
+
 
 class PugHistory(Model):
+    """Table to hold history of pug games organised through Discord"""
+
     game_id = fields.IntField(pk=True, generated=True)
     date = fields.DatetimeField(auto_now_add=True)
     channel_id = fields.CharField(max_length=18)
@@ -19,22 +31,29 @@ class PugHistory(Model):
     players = fields.CharField(max_length=255)
 
     class Meta:
+        """PugHistory metadata"""
+
         table = "pug_history"
         table_description = "History of all played pug games"
         # Add a unqiue constraint to avoid shenanigans
-        unique_together = ('channel_id', 'players')
+        unique_together = ("channel_id", "players")
+
 
 class Players(Model):
+    """Table to hold every player that uses the pickup system"""
+
     steam_id = fields.CharField(pk=True, generated=False, max_length=20)
 
     class Meta:
+        """Players metadata"""
+
         table = "players"
         table_description = "Stores information on all Players"
 
-    # def __str__(self):
-    #     return self.nick
 
 class LogstfData(Model):
+    """Table to hold top-level info about a logs.tf game"""
+
     game_id = fields.IntField(pk=True, generated=False)
     uploader_id = fields.IntField()
     game_map = fields.CharField(max_length=25)
@@ -43,13 +62,18 @@ class LogstfData(Model):
     game_data = fields.JSONField()
 
     class Meta:
+        """LogstfData metadata"""
+
         table = "logstf"
         table_description = "Stores raw logstf data for all matches"
-        unique_together = ('game_id', 'uploader_id')
+        unique_together = ("game_id", "uploader_id")
+
 
 class MatchData(Model):
+    """Table to hold detailed stats about a logs.tf match"""
+
     match_id = fields.IntField(pk=True, generated=True)
-    logstf = fields.ForeignKeyField('models.LogstfData', related_name='match_data')
+    logstf = fields.ForeignKeyField("models.LogstfData", related_name="match_data")
     match_date = fields.DatetimeField()
     winning_team = fields.CharField(max_length=4)
     # Should we reference Players table for each player in the game?
@@ -73,15 +97,20 @@ class MatchData(Model):
     blue_caps = fields.IntField()
 
     class Meta:
+        """MatchData metadata"""
+
         table = "matches"
         table_description = "Stores data on all matches played"
-        unique_together = ('logstf', )
+        unique_together = ("logstf",)
+
 
 class PlayerStats(Model):
+    """Table to hold all game stats for a particular player"""
+
     stats_id = fields.IntField(pk=True, generated=True)
-    match = fields.ForeignKeyField('models.MatchData', related_name='player_stats')
-    logstf = fields.ForeignKeyField('models.LogstfData', related_name='player_stats')
-    player = fields.ForeignKeyField('models.Players', related_name='player_stats')
+    match = fields.ForeignKeyField("models.MatchData", related_name="player_stats")
+    logstf = fields.ForeignKeyField("models.LogstfData", related_name="player_stats")
+    player = fields.ForeignKeyField("models.Players", related_name="player_stats")
     team = fields.CharField(max_length=4)
     # I need to add win here as boolean
     # These need to be broken out into separate tables?
@@ -122,6 +151,8 @@ class PlayerStats(Model):
     ic = fields.IntField()
 
     class Meta:
+        """PlayerStats metadata"""
+
         table = "stats"
         table_description = "Contains a players stats for each match"
-        unique_together = ('logstf', 'player')
+        unique_together = ("logstf", "player")
