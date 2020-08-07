@@ -7,7 +7,7 @@ Miss Pauling is a Discord bot for the Team Fortress 2 South Africa community: rs
 In order to run Miss Pauling for yourself, with full functionality, you will need:
 - Python 3.8+
 - A Discord [bot account](https://discordpy.readthedocs.io/en/latest/discord.html)
-- An `.env` file (example below)
+- An `.env` file places in the projects root directory (example below)
 - A TF2 (or SRCDS) server
 
 ## Installation
