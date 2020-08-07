@@ -1,11 +1,17 @@
+"""Handles Pick-up Game logic"""
+
 import random
+
 try:
     from .player import Player
-except:
+except ImportError:
     from player import Player
-import json
 
-class Game():
+
+class Game:
+    """Creates a pick up game, handles teams and players added to those teams and overall game status"""
+
+    # pylint: disable=too-many-instance-attributes
 
     def __init__(self, teams: int = 2, mode="6v6") -> None:
         self.empty_slot = "?"
@@ -19,14 +25,15 @@ class Game():
         self.game_full = False
 
     def start(self, teams: int = 2, mode="6v6") -> None:
+        """Starts a pickup game with the specified number of teams. The mode determines number of players per team."""
         if self.game_on is True:
             raise GameOnError("Game already on.")
 
         self.teams_count = teams
         self.mode = mode
-        if type(mode) == int:
+        if isinstance(mode, int):
             self.team_size = mode
-        elif type(mode) == str:
+        elif isinstance(mode, str):
             if mode == "2v2":
                 self.team_size = 2
             elif mode == "6v6":
@@ -37,13 +44,16 @@ class Game():
                 self.team_size = 9
             else:
                 self.team_size = 6
-        self.teams = [[self.empty_slot for x in range(self.team_size)] for i in range(self.teams_count)]
+        self.teams = [
+            [self.empty_slot for x in range(self.team_size)]
+            for i in range(self.teams_count)
+        ]
         self.max_players = self.team_size * self.teams_count
         self.player_count = 0
         self.game_on = True
-        return
 
     def stop(self):
+        """Stops a game if one is active"""
         if self.game_on is False:
             raise GameOnError("No game on.")
 
@@ -54,14 +64,14 @@ class Game():
         self.player_count = None
         self.game_on = False
         self.game_full = False
-        return
 
     def restart(self, teams: int = 2, mode="6v6"):
+        """Restarts a game if one is active, can restart to a new mode or with different number of teams"""
         self.stop()
         self.start(teams=teams, mode=mode)
-        return
-    
+
     def status(self) -> str:
+        """Returns a JSON object of Player objects that have been added"""
         if self.game_on is False:
             raise GameNotOnError("No game on.")
 
@@ -71,10 +81,11 @@ class Game():
         return teams
 
     def pretty_status(self) -> str:
-        status = self.status()
+        """Prettifies the output from status()"""
+        game_status = self.status()
         teams = []
 
-        for key, value in status.items():
+        for _, value in game_status.items():
             teams.append(value)
         team_count = 0
         all_teams = ""
@@ -96,6 +107,7 @@ class Game():
         return all_teams
 
     def add(self, player: Player, team: int = None) -> None:
+        """Adds a Player to a game. If no team is chosen, one will be randomly chosen"""
         if self.game_on is False:
             raise GameNotOnError("No game on.")
 
@@ -116,7 +128,7 @@ class Game():
             raise InvalidTeamError("Invalid team selected.")
         elif team - 1 not in eligible_teams:
             raise TeamFullError("Team is full.")
-        else:    
+        else:
             selected_team = self.teams[team - 1]
 
         for index, slot in enumerate(selected_team):
@@ -127,25 +139,27 @@ class Game():
 
         if self.player_count == self.max_players:
             self.game_full = True
-        return
 
     def remove(self, player: Player) -> None:
+        """Removes a Player from a running game"""
         if self.game_on is False:
             raise GameNotOnError("No game on")
 
         if not any(player in x for x in self.teams):
             raise PlayerNotAddedError("Player is not added.")
-        
+
         for index, _ in enumerate(self.teams):
             if player in self.teams[index]:
-                self.teams[index] = [self.empty_slot if x == player else x for x in self.teams[index]]
+                self.teams[index] = [
+                    self.empty_slot if x == player else x for x in self.teams[index]
+                ]
         self.player_count -= 1
 
         if self.game_full:
             self.game_full = False
-        return
 
     def transform(self, teams: int = 2, mode="6v6") -> None:
+        """Remakes a game into a new game of a different size and retains Players"""
         if self.game_on is False:
             raise GameNotOnError("No game on")
 
@@ -155,9 +169,9 @@ class Game():
                 if player != self.empty_slot:
                     players.append(player)
 
-        if type(mode) == int:
+        if isinstance(mode, int):
             self.team_size = mode
-        elif type(mode) == str:
+        elif isinstance(mode, str):
             if mode == "2v2":
                 self.team_size = 2
             elif mode == "6v6":
@@ -176,9 +190,9 @@ class Game():
         self.start(teams, mode)
         for player in players:
             self.add(player)
-        return
 
     def balance(self) -> None:
+        """Uses a greedy sort to balance Players into teams based on their rating attribute"""
         if self.game_on is False:
             raise GameNotOnError("No game on")
 
@@ -204,7 +218,6 @@ class Game():
             # So that we can add the next highest skilled player to that team
             new_teams.sort(key=lambda x: sum(i.rating for i in x), reverse=False)
         self.teams = new_teams
-        return
 
     def _team_count(self, team: list) -> int:
         player_count = 0
@@ -212,60 +225,47 @@ class Game():
             if player != self.empty_slot:
                 player_count += 1
         return player_count
-    
+
     def _is_full(self, team: list) -> bool:
-        if self._team_count(team) == len(team):
-            return True
-        else:
-            return False
+        return bool(self._team_count(team) == len(team))
+
 
 # Errors
 
+
 class InvalidTeamError(ValueError):
-    def __init__(self, message):
+    """Error raised when a player is attempted to be added to a team that does not exist"""
 
-        # Call the base class constructor with the parameters it needs
-        super().__init__(message)
-
-        # Now for your custom code...
-        # self.errors = errors
 
 class TeamFullError(ValueError):
-    def __init__(self, message):
+    """Error raised when a team is full and a player is attempted to be added anyway"""
 
-        super().__init__(message)
 
 class PlayerAddedError(ValueError):
-    def __init__(self, message):
+    """Error raised when a player is already added and is attempted to be added again"""
 
-        super().__init__(message)
 
 class PlayerNotAddedError(ValueError):
-    def __init__(self, message):
+    """Error raised when a player is attempted to be removed but is not added"""
 
-        super().__init__(message)
 
 class GameFullError(ValueError):
-    def __init__(self, message):
+    """Error raised when the game is full and more players are attempted to be added"""
 
-        super().__init__(message)
 
 class GameOnError(ValueError):
-    def __init__(self, message):
+    """Error raised when the game on state prevents another action such as starting a game again"""
 
-        super().__init__(message)
 
 class GameNotOnError(ValueError):
-    def __init__(self, message):
+    """Error raised when there is no pickup game currently started"""
 
-        super().__init__(message)
 
 class CannotTransformError(ValueError):
-    def __init__(self, message):
+    """Error raised when a pickup game of one size cannot be transformed to another size"""
 
-        super().__init__(message)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     game = Game()
     game.start()
     russ = Player("russ", 0)

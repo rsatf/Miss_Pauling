@@ -1,14 +1,16 @@
-import logging
-import os
-from pauling.db import init as db
-import asyncio
+"""Miss Pauling module"""
 
-logger = logging.getLogger('pauling')
+import os
+import asyncio
+import logging
+from pauling.db import init as db
+
+logger = logging.getLogger("pauling")
 logger.setLevel(logging.INFO)
 
-log_format = logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s')
+log_format = logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s")
 
-file_handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
+file_handler = logging.FileHandler(filename="discord.log", encoding="utf-8", mode="w")
 file_handler.setFormatter(log_format)
 
 console_handler = logging.StreamHandler()
