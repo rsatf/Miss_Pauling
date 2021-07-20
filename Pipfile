@@ -8,13 +8,15 @@ verify_ssl = true
 [packages]
 "discord.py" = "*"
 python-valve = "*"
-aiohttp = "*"
 python-dotenv = "*"
 master = {editable = true, git = "https://github.com/theskumar/python-dotenv"}
 aioquery = "*"
 tortoise-orm = {editable = true, git = "https://github.com/tortoise/tortoise-orm", ref = "0.16.13"}
 pylint = "*"
 black = "*"
+pyyaml = "*"
+coverage = "*"
+pytest = "*"
 
 [requires]
 python_version = "3.8"

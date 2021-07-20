@@ -19,5 +19,6 @@ pauling.load_extension("pauling.cogs.pug")
 pauling.load_extension("pauling.cogs.servers")
 pauling.load_extension("pauling.cogs.admin_extensions")
 pauling.load_extension("pauling.cogs.admin_users")
+pauling.load_extension("pauling.cogs.admin_roles")
 
 pauling.run(TOKEN)

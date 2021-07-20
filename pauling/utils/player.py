@@ -6,6 +6,11 @@ import discord
 class Player:
     """A Player object comprised of a discord.Member object as well as a skill rating and steamid"""
 
+    # def __init__(self, player, rating: int, steamid):
+    #     self.display_name = player
+    #     self.rating = rating
+    #     self.steamid = steamid
+
     def __init__(self, player: discord.Member, rating: int, steamid):
         self.player = player
         self.id = player.id

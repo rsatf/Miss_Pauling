@@ -4,8 +4,10 @@ import random
 
 try:
     from .player import Player
+    from .game_modes import GameMode
 except ImportError:
     from player import Player
+    from game_modes import GameMode
 
 
 class Game:
@@ -13,37 +15,34 @@ class Game:
 
     # pylint: disable=too-many-instance-attributes
 
-    def __init__(self, teams: int = 2, mode="6v6") -> None:
+    def __init__(self, mode: GameMode = "sixes") -> None:
         self.empty_slot = "?"
-        self.teams_count = teams
-        self.mode = None
+        self.teams_count = None
         self.team_size = None
         self.teams = None
         self.max_players = None
         self.player_count = None
         self.game_on = False
         self.game_full = False
+        self.server = None
+        self.set_mode(mode)
 
-    def start(self, teams: int = 2, mode="6v6") -> None:
+    def set_mode(self, mode):
+        """Loads variables based on game mode"""
+        game_mode = GameMode("../configs/game_modes.yaml", mode)
+        self.team_size = game_mode.players
+        self.teams_count = game_mode.teams
+        self.map_pool = game_mode.map_pool
+        self.server_pool = game_mode.server_pool
+
+    def start(self, mode="sixes") -> None:
         """Starts a pickup game with the specified number of teams. The mode determines number of players per team."""
         if self.game_on is True:
             raise GameOnError("Game already on.")
 
-        self.teams_count = teams
-        self.mode = mode
-        if isinstance(mode, int):
-            self.team_size = mode
-        elif isinstance(mode, str):
-            if mode == "2v2":
-                self.team_size = 2
-            elif mode == "6v6":
-                self.team_size = 6
-            elif mode == "7v7":
-                self.team_size = 7
-            elif mode == "9v9":
-                self.team_size = 9
-            else:
-                self.team_size = 6
+        if mode is not None:
+            self.set_mode(mode)
+
         self.teams = [
             [self.empty_slot for x in range(self.team_size)]
             for i in range(self.teams_count)
@@ -57,7 +56,6 @@ class Game:
         if self.game_on is False:
             raise GameOnError("No game on.")
 
-        self.mode = None
         self.team_size = None
         self.teams = None
         self.max_players = None
@@ -65,10 +63,12 @@ class Game:
         self.game_on = False
         self.game_full = False
 
-    def restart(self, teams: int = 2, mode="6v6"):
+    def restart(self, mode="sixes"):
         """Restarts a game if one is active, can restart to a new mode or with different number of teams"""
         self.stop()
-        self.start(teams=teams, mode=mode)
+        if mode is not None:
+            self.set_mode(mode)
+        self.start(mode)
 
     def status(self) -> str:
         """Returns a JSON object of Player objects that have been added"""
@@ -78,6 +78,7 @@ class Game:
         teams = {}
         for i in range(0, len(self.teams)):
             teams[i] = self.teams[i]
+
         return teams
 
     def pretty_status(self) -> str:
@@ -187,7 +188,7 @@ class Game:
             raise CannotTransformError("Target game size too small.")
 
         self.stop()
-        self.start(teams, mode)
+        self.start()
         for player in players:
             self.add(player)
 
@@ -231,8 +232,6 @@ class Game:
 
 
 # Errors
-
-
 class InvalidTeamError(ValueError):
     """Error raised when a player is attempted to be added to a team that does not exist"""
 
@@ -266,11 +265,13 @@ class CannotTransformError(ValueError):
 
 
 if __name__ == "__main__":
-    game = Game()
+    game = Game("sixes")
     game.start()
-    russ = Player("russ", 0)
+    russ = Player("russ", 0, 0)
     game.add(russ)
-    status = game.status()
+    status = game.pretty_status()
     print(status)
-    print(type(status[0][0]))
-    print(type(status[1][0]))
+    game.restart("test")
+    game.add(russ)
+    status = game.pretty_status()
+    print(status)

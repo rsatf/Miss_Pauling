@@ -46,7 +46,7 @@ class Timer:
     async def countdown(self):
         """Checks if the game is still full and commences the game if the countdown completes"""
         context = self.game.chaninfo[self.chan]
-        count = 60
+        count = 1
         while count and context["game"].game_full:
             self.logger.info(
                 "%s: Game is still full. Checks remaining: %s", self.chan, count
@@ -60,8 +60,9 @@ class Timer:
 
         if context["game"].game_full:
             self.logger.info("Game commencing")
+            context = self.game.chaninfo[self.chan]
             # We want to run Pug's game_stop() method which will clear some variables so make copies of them first
-            self.game_server = context["game_server"]
+            self.game_server = context["game"].server
             self.game_password = random.choice(self.game.passwords)
             game_players = [x for x in context["added_players"].values()]
 
@@ -89,14 +90,14 @@ class Timer:
             for player in game_players:
                 await player.player.send(connect_string)
 
-            self.game.used_servers.append(self.game_server)
+            # self.game.used_servers.append(self.game_server)
             await self.loop.create_task(self.server_readd())
 
     async def server_readd(self):
         """A timer to re-add a server to the server pool"""
-        await asyncio.sleep(300)
-        self.logger.info("Adding %s back to to server pool", self.game_server)
-        self.game.servers.append(self.game_server)
+        await asyncio.sleep(60)
+        self.logger.info("Removing %s from used servers %s", self.game_server, self.game.used_servers)
+        self.game.used_servers.remove(self.game_server)
         self.game_server = None
 
 
@@ -111,13 +112,11 @@ class PUG(commands.Cog, name="Pick-up Game"):
 
     def __init__(self, client):
         load_dotenv()
-        self.reset_password.start()
+        # self.reset_password.start()
         self.client = client
         self.game_guild = int(os.getenv("PRIMARY_GUILD"))
-        self.servers = eval(os.getenv("PUG_SERVERS"))
         self.passwords = eval(os.getenv("PUG_PASSWORDS"))
         self.rcon_password = os.getenv("RCON_PASSWORD")
-        self.map_pool = eval(os.getenv("MAP_POOL"))
         self.used_servers = []
         self.channels = eval(os.getenv("PUG_CHANNELS"))
         self.chaninfo = {}
@@ -133,17 +132,16 @@ class PUG(commands.Cog, name="Pick-up Game"):
             self.chaninfo[channel] = {}
             self.chaninfo[channel]["ctx"] = None
             self.chaninfo[channel]["game_message"] = None
-            self.chaninfo[channel]["game_server"] = None
             self.chaninfo[channel]["game_map"] = None
             self.chaninfo[channel]["added_players"] = {}
-            game = Game(2, 6)
+            game = Game(mode="captain")
             self.chaninfo[channel]["game"] = game
             timer = Timer(self, channel)
             self.chaninfo[channel]["timer"] = timer
 
     @commands.command(help="- Starts a pick-up game")
     @commands.has_any_role("admin", "pug-admin", "captain")
-    async def start(self, ctx, teams=1, mode=12):
+    async def start(self, ctx, mode="captain"):
         """Starts a pickup game if one is not already on"""
         context = self.chaninfo[ctx.channel.id]
         self.logger.info(
@@ -161,34 +159,37 @@ class PUG(commands.Cog, name="Pick-up Game"):
             return
 
         if not context["game"].game_on:
-            context["game_server"] = await self.find_server()
+            try:
+                context["game"].start(mode)
+            except GameOnError as e:
+                await ctx.send(f"{e}")
 
-            if context["game_server"] is None:
+            context["game"].server = await self.find_server(context)
+
+            if context["game"].server is None:
                 await ctx.send("No open servers to use, not starting.")
                 return
 
-            if context["game_server"] in self.used_servers:
-                self.used_servers.remove(context["game_server"])
+            if context["game"].server in self.used_servers:
+                self.used_servers.remove(context["game"].server)
 
-            if context["game_server"] is not None:
-                self.servers.remove(context["game_server"])
+            if context["game"].server is not None:
+                self.logger.info(
+                    "Adding server %s to used list %s", context["game"].server, self.used_servers
+                )
+                self.used_servers.append(context["game"].server)
 
-            context["game_map"] = random.choice(self.map_pool)
-            try:
-                context["game"].start(teams, mode)
-            except GameOnError as e:
-                await ctx.send(f"{e}")
-                return
+            context["game_map"] = random.choice(context["game"].map_pool)
 
             await ctx.send(
-                f'Game started! This game will be played on {context["game_server"][0]}:{context["game_server"][1]}'
+                f'Game started! This game will be played on {context["game"].server[0]}:{context["game"].server[1]}'
             )
             context["game_message"] = await ctx.send(
                 f'```({context["game_map"]}) {context["game"].pretty_status()}```'
             )
             await context["game_message"].pin()
             await self.change_password(
-                address=context["game_server"], password="temppassword"
+                address=context["game"].server, password="temppassword"
             )
         return
 
@@ -207,7 +208,7 @@ class PUG(commands.Cog, name="Pick-up Game"):
         if ctx.message.channel.id not in self.chaninfo.keys():
             return
 
-        server = context["game_server"]
+        server = context["game"].server
 
         try:
             await self.game_stop(context)
@@ -215,7 +216,7 @@ class PUG(commands.Cog, name="Pick-up Game"):
             await ctx.send(f"{e}")
             return
 
-        self.servers.append(server)
+        self.used_servers.remove(server)
         await ctx.send("Game stopped.")
         await context["game_message"].edit(content="```Game cancelled.```")
         return
@@ -363,11 +364,10 @@ class PUG(commands.Cog, name="Pick-up Game"):
         if ctx.message.channel.id not in self.chaninfo.keys():
             return
         mapname = ""
-        if True in [game_map in x for x in self.map_pool]:
-            for x in self.map_pool:
+        if True in [game_map in x for x in context["game"].map_pool]:
+            for x in context["game"].map_pool:
                 if game_map in x:
                     mapname = x
-                    print(f"Changing map to {mapname}")
             context["game_map"] = mapname
             await ctx.send(f"Map changed to {context['game_map']}")
             await self.status(ctx)
@@ -378,6 +378,7 @@ class PUG(commands.Cog, name="Pick-up Game"):
     @commands.has_any_role("player")
     async def maps(self, ctx):
         """Lists maps added to the map pool"""
+        context = self.chaninfo[ctx.channel.id]
         self.logger.info(
             "%s: %s triggered maps()", ctx.channel.name, ctx.message.author
         )
@@ -388,7 +389,7 @@ class PUG(commands.Cog, name="Pick-up Game"):
         if ctx.message.channel.id not in self.chaninfo.keys():
             return
 
-        await ctx.send(f"Map pool: {', '.join(self.map_pool)}")
+        await ctx.send(f"Map pool: {', '.join(context['game'].map_pool)}")
         return
 
     async def game_start(self, ctx, context):
@@ -407,14 +408,15 @@ class PUG(commands.Cog, name="Pick-up Game"):
             context["game"].stop()
         except (GameOnError, GameNotOnError) as e:
             raise e
-        context["game_server"] = None
+        context["game"].server = None
         context["added_players"] = {}
         await context["game_message"].unpin()
 
-    async def find_server(self):
+    async def find_server(self, context):
         """Finds an open server to use"""
-        self.logger.info("Looking for an open server from: %s", self.servers)
-        for address in self.servers:
+        avail_servs = list(set(context["game"].server_pool) - set(self.used_servers))
+        self.logger.info("Looking for an open server from: %s", avail_servs)
+        for address in avail_servs:
             try:
                 with valve.source.a2s.ServerQuerier(address) as server:
                     server_name = server.info()["server_name"]
@@ -443,37 +445,38 @@ class PUG(commands.Cog, name="Pick-up Game"):
 
     @tasks.loop(seconds=600)
     async def reset_password(self):
-        """Looks for servers not in use and resets their passwords so people can't rejoin"""
-        self.logger.info("Checking for a server password to reset")
-        if self.used_servers:
-            for address in self.used_servers:
-                self.logger.info("Trying to reset password for server %s", address)
-                try:
-                    with valve.source.a2s.ServerQuerier(address) as server:
-                        player_count = server.info()["player_count"]
-                        server_name = server.info()["server_name"]
-                        if player_count < 1:
-                            self.logger.info(
-                                "Changing sv_password of server %s", server_name
-                            )
-                            valve.rcon.execute(
-                                address,
-                                self.rcon_password,
-                                "sv_password wedontreallycare",
-                            )
-                            self.used_servers.remove(address)
-                        else:
-                            self.logger.info(
-                                "Server %s still in use, not changing password", server
-                            )
-                except valve.source.NoResponseError:
-                    self.logger.warning("Could not connect to %s", address)
+        pass
+        # """Looks for servers not in use and resets their passwords so people can't rejoin"""
+        # self.logger.info("Checking for a server password to reset")
+        # if self.used_servers:
+        #     for address in self.used_servers:
+        #         self.logger.info("Trying to reset password for server %s", address)
+        #         try:
+        #             with valve.source.a2s.ServerQuerier(address) as server:
+        #                 player_count = server.info()["player_count"]
+        #                 server_name = server.info()["server_name"]
+        #                 if player_count < 1:
+        #                     self.logger.info(
+        #                         "Changing sv_password of server %s", server_name
+        #                     )
+        #                     valve.rcon.execute(
+        #                         address,
+        #                         self.rcon_password,
+        #                         "sv_password wedontreallycare",
+        #                     )
+        #                     self.used_servers.remove(address)
+        #                 else:
+        #                     self.logger.info(
+        #                         "Server %s still in use, not changing password", server
+        #                     )
+        #         except valve.source.NoResponseError:
+        #             self.logger.warning("Could not connect to %s", address)
 
     def cog_unload(self):
         """Gets called when this plugin is unloaded"""
         self.logger.info("Extension pug is being unloaded!")
         self.logger.handlers = []
-        self.reset_password.cancel()
+        # self.reset_password.cancel()
         del self.chaninfo
 
 
